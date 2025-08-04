@@ -1,16 +1,20 @@
 // src/App.js
-import React, { useContext, useState } from 'react';
+import React, { useContext } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext, AuthProvider } from './context/AuthContext';
+import { LocationProvider } from './context/LocationContext';
+import ErrorBoundary from './components/common/ErrorBoundary';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import RegisterPage from './pages/RegisterPage';
-import LoginPage from './pages/LoginPage'; // Import the LoginPage
+import LoginPage from './pages/LoginPage';
+import SellerRegistration from './pages/SellerRegistration';
+import SellerDetailPage from './pages/SellerDetailPage';
+
 
 // This component now handles the view logic (which page to show)
 function AppContent() {
   const { user, authLoading } = useContext(AuthContext);
-  // State to control which auth page is visible when logged out
-  const [authView, setAuthView] = useState('landing'); // 'landing', 'login', or 'register'
 
   // Show a global loading spinner while checking for a token
   if (authLoading) {
@@ -21,27 +25,36 @@ function AppContent() {
       );
   }
 
-  if (user) {
-    return <Dashboard />;
-  }
-  
-  // Logic to show the correct page when logged out
-  switch(authView) {
-    case 'login':
-      return <LoginPage onShowRegister={() => setAuthView('register')} />;
-    case 'register':
-      return <RegisterPage onShowLogin={() => setAuthView('login')} />;
-    default: // 'landing'
-      return <LandingPage onShowLogin={() => setAuthView('login')} onShowRegister={() => setAuthView('register')} />;
-  }
+  return (
+    <Router>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
+        <Route path="/register" element={!user ? <RegisterPage /> : <Navigate to="/" />} />
+        
+        {/* Protected routes */}
+        <Route path="/dashboard/*" element={user ? <Dashboard /> : <Navigate to="/login" />} />
+        <Route path="/seller-registration" element={user ? <SellerRegistration /> : <Navigate to="/login" />} />
+        <Route path="/seller/:id" element={<SellerDetailPage />} />
+        
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
+  );
 }
 
 // This is the main App component that wraps everything
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ErrorBoundary>
+      <LocationProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </LocationProvider>
+    </ErrorBoundary>
   );
 }
 

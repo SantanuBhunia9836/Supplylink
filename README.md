@@ -1,70 +1,182 @@
-# Getting Started with Create React App
+# SupplyLink
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern React application connecting local shops with reliable vendors for streamlined procurement.
 
-## Available Scripts
+## 🚀 Features
 
-In the project directory, you can run:
+- **Multi-role Authentication**: Support for both shops and vendors
+- **Real-time Dashboard**: Live order tracking and analytics
+- **Order Management**: Create, track, and manage orders
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Error Handling**: Comprehensive error boundaries and user feedback
+- **Loading States**: Smooth loading experiences throughout the app
 
-### `npm start`
+## 🛠️ Tech Stack
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **React 19.1.1** - Modern React with hooks
+- **Tailwind CSS** - Utility-first CSS framework
+- **React Router DOM** - Client-side routing
+- **Context API** - State management
+- **Fetch API** - HTTP requests
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 📦 Installation
 
-### `npm test`
+1. **Clone the repository**
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+   ```bash
+   git clone <repository-url>
+   cd supplylink
+   ```
 
-### `npm run build`
+2. **Install dependencies**
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+   ```bash
+   npm install
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+3. **Set up environment variables** (optional)
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+   ```bash
+   # Create a .env file in the root directory
+   REACT_APP_API_URL=https://vend-sell.onrender.com
+   ```
 
-### `npm run eject`
+4. **Start the development server**
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+   ```bash
+   npm start
+   ```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+5. **Open your browser**
+   Navigate to `http://localhost:3000`
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🏗️ Project Structure
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+```
+supplylink/
+├── public/                 # Static assets
+├── src/
+│   ├── components/         # Reusable components
+│   │   ├── common/        # Shared components (LoadingSpinner, ErrorBoundary)
+│   │   ├── layout/        # Layout components (Header, Sidebar)
+│   │   ├── shop/          # Shop-specific components
+│   │   └── vendor/        # Vendor-specific components
+│   ├── context/           # React Context providers
+│   ├── pages/             # Page components
+│   │   ├── dashboard/     # Dashboard pages
+│   │   └── ...           # Other pages
+│   ├── services/          # API services
+│   └── ...               # Other source files
+├── package.json
+└── README.md
+```
 
-## Learn More
+## 🔧 Available Scripts
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `npm start` - Start development server
+- `npm build` - Build for production
+- `npm test` - Run tests
+- `npm eject` - Eject from Create React App
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## 🎯 Key Components
 
-### Code Splitting
+### Authentication
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+- **AuthContext**: Manages user authentication state
+- **LoginPage**: User login interface
+- **RegisterPage**: User registration interface
 
-### Analyzing the Bundle Size
+### Dashboard
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+- **ShopOverview**: Dashboard overview for shops
+- **CreateOrder**: Order creation interface
+- **ShopOrders**: Order history and tracking
 
-### Making a Progressive Web App
+### Layout
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+- **Header**: Top navigation with user profile
+- **Sidebar**: Navigation sidebar with role-based menu
+- **ErrorBoundary**: Catches and handles React errors
 
-### Advanced Configuration
+## 🔌 API Integration
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+The app integrates with a backend API for:
 
-### Deployment
+- User authentication and registration
+- Dashboard data fetching
+- Order management
+- Product catalog
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+### Environment Variables
 
-### `npm run build` fails to minify
+Create a `.env` file in the root directory:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```env
+REACT_APP_API_URL=https://vend-sell.onrender.com
+```
+
+## 🎨 Styling
+
+The app uses **Tailwind CSS** for styling with:
+
+- Responsive design
+- Dark/light theme support
+- Custom animations
+- Consistent spacing and typography
+
+## 🚨 Error Handling
+
+- **Error Boundaries**: Catch React component errors
+- **API Error Handling**: Proper error messages for API failures
+- **Network Error Handling**: Graceful handling of network issues
+- **Loading States**: User feedback during async operations
+
+## 📱 Responsive Design
+
+The app is fully responsive with:
+
+- Mobile-first approach
+- Touch-friendly interfaces
+- Adaptive layouts
+- Optimized for various screen sizes
+
+## 🔒 Security
+
+- **Token-based Authentication**: JWT tokens for secure sessions
+- **Session Storage**: Secure token storage
+- **Input Validation**: Client-side form validation
+- **Error Sanitization**: Safe error message display
+
+## 🚀 Deployment
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Deploy to Netlify/Vercel
+
+1. Connect your repository
+2. Set build command: `npm run build`
+3. Set publish directory: `build`
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support, please open an issue in the repository or contact the development team.
+
+---
+
+**Made with ❤️ for the local businesses of Dankuni, West Bengal.**

@@ -1,5 +1,6 @@
 // src/pages/LoginPage.js
 import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 
 // --- Reusable Icon Components ---
@@ -14,14 +15,15 @@ const BriefcaseIcon = (props) => (
 );
 
 
-const LoginPage = ({ onShowRegister }) => {
+const LoginPage = () => {
     const { login, loading, error } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        email: '',
+        username: '',
         password: '',
-        role: 'shop', // Default role
+        role: 'vendor', // Only vendor role now
     });
-    const [errors, setErrors] = useState({});
+    const [validationErrors, setValidationErrors] = useState({});
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -30,22 +32,26 @@ const LoginPage = ({ onShowRegister }) => {
     
     const validateForm = () => {
         const newErrors = {};
-        if (!formData.email) {
-            newErrors.email = 'Email is required.';
-        } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Email address is invalid.';
+        if (!formData.username) {
+            newErrors.username = 'Email is required.';
         }
         if (!formData.password) {
             newErrors.password = 'Password is required.';
         }
-        setErrors(newErrors);
+        setValidationErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (validateForm()) {
-            login(formData); // Pass the whole form data object to the login function
+            try {
+                await login(formData);
+                // Navigation will be handled by the App component's routing logic
+            } catch (err) {
+                // Error is handled by the AuthContext, but we can log it here if needed
+                console.error("Login attempt failed on page:", err);
+            }
         }
     };
 
@@ -56,35 +62,40 @@ const LoginPage = ({ onShowRegister }) => {
                 <div className="w-full lg:w-1/2 p-8 md:p-12">
                     <h1 className="text-2xl font-bold text-blue-600 mb-8">SupplyLink</h1>
                     <h2 className="text-3xl font-bold text-gray-800">Welcome Back!</h2>
-                    <p className="text-gray-500 mt-2 mb-8">Please sign in to your account.</p>
+                    <p className="text-gray-500 mt-2 mb-8">Sign in to your vendor account.</p>
+
+                    {/* Password Security Notice */}
+                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-start">
+                            <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div>
+                                <h4 className="text-sm font-medium text-blue-800 mb-1">Browser Security Notice</h4>
+                                <p className="text-xs text-blue-700">
+                                    If your browser shows a warning about the password being found in a database, 
+                                    this is a security feature to protect you. Your password may have been compromised 
+                                    in a data breach. Consider changing your password for better security.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <form onSubmit={handleSubmit} noValidate>
                         <div className="space-y-5">
                             <div>
-                                <label className="text-sm font-medium text-gray-700 mb-2 block">I am a...</label>
-                                <div className="flex w-full rounded-md shadow-sm">
-                                    <button type="button" onClick={() => setFormData({...formData, role: 'shop'})} className={`flex-1 inline-flex items-center justify-center px-4 py-2 border text-sm font-medium rounded-l-md transition-colors ${formData.role === 'shop' ? 'bg-blue-600 text-white border-blue-600 z-10' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-                                        <StoreIcon className="w-5 h-5 mr-2"/> Shop
-                                    </button>
-                                    <button type="button" onClick={() => setFormData({...formData, role: 'vendor'})} className={`-ml-px flex-1 inline-flex items-center justify-center px-4 py-2 border text-sm font-medium rounded-r-md transition-colors ${formData.role === 'vendor' ? 'bg-green-600 text-white border-green-600 z-10' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
-                                        <TruckIcon className="w-5 h-5 mr-2"/> Vendor
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
-                                <input type="email" id="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="you@example.com" className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.email ? 'border-red-500' : 'border-gray-300'}`} />
-                                {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+                                <label htmlFor="username" className="block text-sm font-medium text-gray-700">Email Address</label>
+                                <input type="email" id="username" name="username" value={formData.username} onChange={handleInputChange} placeholder="user@example.com" className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${validationErrors.username ? 'border-red-500' : 'border-gray-300'}`} />
+                                {validationErrors.username && <p className="mt-1 text-xs text-red-600">{validationErrors.username}</p>}
                             </div>
 
                             <div>
                                 <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                                <input type="password" id="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${errors.password ? 'border-red-500' : 'border-gray-300'}`} />
-                                {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
+                                <input type="password" id="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="••••••••" className={`mt-1 block w-full px-3 py-2 bg-white border rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm ${validationErrors.password ? 'border-red-500' : 'border-gray-300'}`} />
+                                {validationErrors.password && <p className="mt-1 text-xs text-red-600">{validationErrors.password}</p>}
                             </div>
                             
-                            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+                            {error && <p className="text-sm text-red-600 text-center bg-red-50 p-3 rounded-md">{error}</p>}
 
                             <div>
                                 <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300">
@@ -97,7 +108,7 @@ const LoginPage = ({ onShowRegister }) => {
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-600">
                             Don't have an account?{' '}
-                            <button onClick={onShowRegister} className="font-medium text-blue-600 hover:underline">
+                            <button onClick={() => navigate('/register')} className="font-medium text-blue-600 hover:underline">
                                 Sign up
                             </button>
                         </p>
@@ -105,9 +116,9 @@ const LoginPage = ({ onShowRegister }) => {
                 </div>
                 {/* Decorative Panel */}
                 <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-blue-600 to-green-500 p-12 text-white flex-col justify-center items-center text-center">
-                    <BriefcaseIcon className="w-20 h-20 mb-6"/>
-                    <h2 className="text-4xl font-bold mb-3">Powering Local Commerce</h2>
-                    <p className="text-blue-100 text-lg">The all-in-one platform for your business supplies.</p>
+                    <TruckIcon className="w-20 h-20 mb-6"/>
+                    <h2 className="text-4xl font-bold mb-3">Vendor Portal</h2>
+                    <p className="text-blue-100 text-lg">Manage your deliveries and orders efficiently.</p>
                 </div>
             </div>
         </div>
