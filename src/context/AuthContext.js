@@ -1,101 +1,135 @@
 // src/context/AuthContext.js
-import React, { useState, createContext, useEffect } from 'react';
-import { apiLogin, getProfile, apiLogout, getVendorProfile } from '../services/api';
+import React, { useState, createContext, useCallback, useEffect } from 'react';
+import { apiLogin, apiLogout, getVendorProfile, getVendorStatus } from '../services/api';
+import TokenManager from '../utils/tokenManager';
+
+// --- Full Screen Loader Component ---
+const FullScreenLoader = () => (
+  <div className="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[9999]">
+    <div className="text-white text-3xl font-bold mb-4">
+      SupplyLink
+    </div>
+    <div className="w-64 h-1 bg-gray-700 rounded-full overflow-hidden">
+      <div className="h-1 bg-blue-500 rounded-full animate-loader-progress"></div>
+    </div>
+    <style>{`
+      @keyframes loader-progress {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+      .animate-loader-progress {
+        animation: loader-progress 1.5s infinite linear;
+      }
+    `}</style>
+  </div>
+);
+
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => sessionStorage.getItem('authToken'));
+  const [token, setToken] = useState(() => TokenManager.getToken());
   const [loading, setLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [initialScreenLoading, setInitialScreenLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [profileCompletion, setProfileCompletion] = useState({
+    profile_done: 0,
+    profile_creds: [],
+    seller_profile_done: 0,
+    seller_profile_creds: []
+  });
 
   useEffect(() => {
-    const validateToken = async () => {
-      if (token) {
-        try {
-          const userRole = sessionStorage.getItem('userRole');
-          if (userRole) {
-                                 try {
-                       if (userRole === 'vendor') {
-                         const profileData = await getVendorProfile(token);
-                         setUser({ ...profileData, role: userRole });
-                       } else {
-                         const profileData = await getProfile(token, userRole);
-                         setUser({ ...profileData, role: userRole });
-                       }
-                     } catch (profileErr) {
-                       // Only clear token for authentication errors
-                       if (profileErr.message && (
-                         profileErr.message.includes('401') ||
-                         profileErr.message.includes('403') ||
-                         profileErr.message.includes('Unauthorized') ||
-                         profileErr.message.includes('Forbidden')
-                       )) {
-                         sessionStorage.removeItem('authToken');
-                         sessionStorage.removeItem('userRole');
-                         setToken(null);
-                       } else {
-                         // Keep user logged in with minimal data for other errors
-                         setUser({ role: userRole, name: 'User', email: 'user@example.com' });
-                       }
-                     }
-          } else {
-            sessionStorage.removeItem('authToken');
-            setToken(null);
-          }
-        } catch (err) {
-          const userRole = sessionStorage.getItem('userRole');
-          if (userRole) {
-            setUser({ role: userRole, name: 'User', email: 'user@example.com' });
-          }
+    const timer = setTimeout(() => {
+      setInitialScreenLoading(false);
+    }, 2000); // Show loader for 2 seconds
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const clearUserData = useCallback(() => {
+    setUser(null);
+    setToken(null);
+    setProfileCompletion({
+      profile_done: 0,
+      profile_creds: [],
+      seller_profile_done: 0,
+      seller_profile_creds: []
+    });
+    TokenManager.clearToken();
+  }, []);
+
+  const logout = useCallback(async () => {
+    setLogoutLoading(true);
+    try {
+      await apiLogout(token);
+    } catch (err) {
+      console.error("Logout API call failed", err);
+    } finally {
+      clearUserData();
+      setLogoutLoading(false);
+    }
+  }, [clearUserData, token]);
+
+  const validateSession = useCallback(async () => {
+    setAuthLoading(true);
+    try {
+      const status = await getVendorStatus();
+      
+      if (!status.is_login) {
+        clearUserData();
+      } else {
+        const profileData = await getVendorProfile();
+        
+        setUser({
+          ...profileData,
+          is_seller: status.is_seller,
+          role: 'vendor',
+        });
+        
+        setProfileCompletion({
+          profile_done: status.profile_done || 0,
+          profile_creds: status.profile_creds || [],
+          seller_profile_done: status.seller_profile_done || 0,
+          seller_profile_creds: status.seller_profile_creds || []
+        });
+        
+        const existingToken = TokenManager.getToken();
+        if (!token && existingToken) {
+          setToken(existingToken);
         }
       }
+    } catch (err) {
+      console.error("Session validation failed", err);
+      clearUserData();
+    } finally {
       setAuthLoading(false);
-    };
-    validateToken();
-  }, [token]);
+    }
+  }, [clearUserData, token]);
+
+  // *** FIX: The dependency array is now empty. This ensures validateSession
+  // runs ONLY ONCE when the app first loads, and not after a logout. ***
+  useEffect(() => {
+    validateSession();
+  }, []);
 
   const login = async (credentials) => {
+    setLoading(true);
+    setError(null);
     try {
-      setLoading(true);
-      setError(null);
-      
       const responseData = await apiLogin(credentials);
-      
-      const authToken = responseData.access_token || responseData.token || responseData.accessToken;
-      
-      if (!authToken) {
-        throw new Error("Login successful, but no token was provided. Please check the response format.");
-      }
-      
-      setToken(authToken);
-      
-      // Handle user data - it might be in different fields
-      const userData = responseData.user || responseData.user_data || responseData;
-      
-      // Store token and role
-      sessionStorage.setItem('authToken', authToken);
-      sessionStorage.setItem('userRole', credentials.role);
-      
-      // Set initial user data
-      setUser({ ...userData, role: credentials.role });
+      const authToken = responseData.token; 
+      if (!authToken) throw new Error("Login successful, but no token was provided.");
 
-      // Fetch complete profile data
-      try {
-        if (credentials.role === 'vendor') {
-          const profileData = await getVendorProfile(authToken);
-          setUser({ ...profileData, role: credentials.role });
-        } else {
-          const profileData = await getProfile(authToken, credentials.role);
-          setUser({ ...profileData, role: credentials.role });
-        }
-      } catch (profileError) {
-        // User is still logged in with basic data
-        setUser({ role: credentials.role, name: 'User', email: credentials.username });
-      }
+      setToken(authToken);
+      TokenManager.setToken(authToken);
+      TokenManager.setUserRole(credentials.role);
       
+      await validateSession();
+
     } catch (err) {
       setError(err.message);
       throw err;
@@ -104,42 +138,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      if (token) {
-        await apiLogout(token);
-      }
-    } catch (error) {
-      // Continue with logout even if API call fails
-    } finally {
-      setUser(null);
-      setToken(null);
-      sessionStorage.removeItem('authToken');
-      sessionStorage.removeItem('userRole');
-    }
+  const value = { 
+    user, 
+    token, 
+    loading, 
+    logoutLoading, 
+    error, 
+    authLoading, 
+    profileCompletion,
+    login, 
+    logout, 
+    validateSession 
   };
 
-  const value = {
-    user,
-    token,
-    loading,
-    error,
-    authLoading,
-    login,
-    logout,
-  };
-
-  if (authLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-blue-600"></div>
-        </div>
-      );
+  if (initialScreenLoading) {
+    return <FullScreenLoader />;
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

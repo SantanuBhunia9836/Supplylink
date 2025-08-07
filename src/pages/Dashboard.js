@@ -10,12 +10,19 @@ import ShopOverview from './dashboard/ShopOverview';
 import CreateOrder from './dashboard/CreateOrder';
 import ShopOrders from './dashboard/ShopOrders';
 
-// --- MAIN DASHBOARD COMPONENT ---
+// A new placeholder component for the Seller Dashboard
+const SellerDashboard = () => (
+    <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-2xl font-bold mb-4">Seller Dashboard</h2>
+        <p>Welcome to your seller dashboard! Full features for managing your factory, products, and orders are coming soon.</p>
+    </div>
+);
+
+
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
     const location = useLocation();
 
-    // Get the current page from the URL path
     const getCurrentPage = () => {
         const path = location.pathname;
         if (path.includes('/create-order')) return 'create-order';
@@ -26,6 +33,15 @@ const Dashboard = () => {
     const currentPage = getCurrentPage();
 
     const renderPage = () => {
+        // THE KEY CHANGE IS HERE: Prioritize the seller view
+        if (user.is_seller) {
+            return (
+                <Routes>
+                    <Route path="/*" element={<SellerDashboard />} />
+                </Routes>
+            );
+        }
+
         if (user.role === 'shop') {
             return (
                 <Routes>
@@ -37,18 +53,13 @@ const Dashboard = () => {
                 </Routes>
             );
         }
-        if (user.role === 'vendor') {
-            return (
-                <div className="bg-white p-6 rounded-lg shadow">
-                    <h2 className="text-2xl font-bold mb-4">Vendor Dashboard</h2>
-                    <p>Vendor dashboard features coming soon!</p>
-                </div>
-            );
-        }
+        
+        // Fallback if role is not recognized
         return <Navigate to="/" />;
     };
     
     const getPageTitle = () => {
+        if (user.is_seller) return 'Seller Dashboard';
         switch (currentPage) {
             case 'create-order': return 'Create Order';
             case 'orders': return 'My Orders';

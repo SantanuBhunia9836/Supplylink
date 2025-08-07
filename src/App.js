@@ -1,5 +1,6 @@
 // src/App.js
 import React, { useContext } from 'react';
+import './App.css';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext, AuthProvider } from './context/AuthContext';
 import { LocationProvider } from './context/LocationContext';
@@ -10,20 +11,12 @@ import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import SellerRegistration from './pages/SellerRegistration';
 import SellerDetailPage from './pages/SellerDetailPage';
+import { ToastContainer } from 'react-toastify';
+// import 'react-toastify/dist/ReactToastify.css';
 
 
-// This component now handles the view logic (which page to show)
 function AppContent() {
-  const { user, authLoading } = useContext(AuthContext);
-
-  // Show a global loading spinner while checking for a token
-  if (authLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-            <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-blue-600"></div>
-        </div>
-      );
-  }
+  const { user } = useContext(AuthContext);
 
   return (
     <Router>
@@ -45,13 +38,24 @@ function AppContent() {
   );
 }
 
-// This is the main App component that wraps everything
 function App() {
   return (
     <ErrorBoundary>
       <LocationProvider>
         <AuthProvider>
           <AppContent />
+          <ToastContainer
+            position="bottom-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
         </AuthProvider>
       </LocationProvider>
     </ErrorBoundary>

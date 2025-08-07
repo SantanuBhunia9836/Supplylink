@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// src/components/shop/SellerListing.js
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from '../../context/LocationContext';
 import { searchSellers } from '../../services/api';
 import FilterSection from './FilterSection';
@@ -9,222 +10,117 @@ const SellerListing = () => {
   const [sellers, setSellers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({
-    city: '',
-    sellerType: '',
-    range: '',
-    sortBy: 'distance'
-  });
+  const [filters, setFilters] = useState({ city: '', sellerType: '', range: '', sortBy: 'distance' });
+  
+  const [isVisible, setIsVisible] = useState(false);
+  const sellerSectionRef = useRef(null);
 
-  // Mock data for development - replace with actual API call
-  const mockSellers = [
-    {
-      id: 1,
-      name: 'Fresh Grocery Store',
-      businessType: 'Grocery Store',
-      city: 'Kolkata',
-      state: 'West Bengal',
-      distance: '2.1',
-      rating: '4.5',
-      specialties: ['Fresh Vegetables', 'Dairy Products', 'Organic Items']
-    },
-    {
-      id: 2,
-      name: 'Spice Bazaar',
-      businessType: 'Grocery Store',
-      city: 'Kolkata',
-      state: 'West Bengal',
-      distance: '3.2',
-      rating: '4.2',
-      specialties: ['Spices', 'Dry Fruits', 'Beverages']
-    },
-    {
-      id: 3,
-      name: 'Tech Solutions',
-      businessType: 'Electronics',
-      city: 'Kolkata',
-      state: 'West Bengal',
-      distance: '1.8',
-      rating: '4.7',
-      specialties: ['Mobile Phones', 'Laptops', 'Accessories']
-    },
-    {
-      id: 4,
-      name: 'PharmaCare',
-      businessType: 'Pharmacy',
-      city: 'Kolkata',
-      state: 'West Bengal',
-      distance: '4.5',
-      rating: '4.3',
-      specialties: ['Medicines', 'Health Supplements', 'First Aid']
-    },
-    {
-      id: 5,
-      name: 'Taste of India',
-      businessType: 'Restaurant',
-      city: 'Kolkata',
-      state: 'West Bengal',
-      distance: '2.7',
-      rating: '4.6',
-      specialties: ['Indian Cuisine', 'Tandoori', 'Biryani']
-    },
-    {
-      id: 6,
-      name: 'Hardware Hub',
-      businessType: 'Hardware Store',
-      city: 'Kolkata',
-      state: 'West Bengal',
-      distance: '5.1',
-      rating: '4.1',
-      specialties: ['Tools', 'Building Materials', 'Electrical']
-    }
-  ];
-
-  const searchSellersData = async () => {
+  const searchSellersData = useCallback(async () => {
     if (!location) {
-      setError('Location not available. Please enable location services.');
-      return;
+        setError("Please enable location services to find sellers near you.");
+        return;
     }
 
     setLoading(true);
     setError(null);
-
     try {
-      // For now, using mock data. Replace with actual API call:
-      // const response = await searchSellers(location.latitude, location.longitude, filters);
-      // const sellersData = JSON.parse(response);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Filter mock data based on current filters
-      let filteredSellers = [...mockSellers];
-      
-      if (filters.city) {
-        filteredSellers = filteredSellers.filter(seller => 
-          seller.city.toLowerCase().includes(filters.city.toLowerCase())
-        );
-      }
-      
-      if (filters.sellerType) {
-        filteredSellers = filteredSellers.filter(seller => 
-          seller.businessType === filters.sellerType
-        );
-      }
-      
-      if (filters.range) {
-        const maxDistance = parseFloat(filters.range);
-        filteredSellers = filteredSellers.filter(seller => 
-          parseFloat(seller.distance) <= maxDistance
-        );
-      }
-      
-      // Sort sellers
-      switch (filters.sortBy) {
-        case 'distance':
-          filteredSellers.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
-          break;
-        case 'rating':
-          filteredSellers.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
-          break;
-        case 'name':
-          filteredSellers.sort((a, b) => a.name.localeCompare(b.name));
-          break;
-        default:
-          break;
-      }
-      
-      setSellers(filteredSellers);
+      const sellersData = await searchSellers(location.latitude, location.longitude, filters);
+      setSellers(sellersData);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "An error occurred while fetching sellers.");
+      setSellers([]); // Clear sellers on error
     } finally {
       setLoading(false);
     }
-  };
+  }, [location, filters]);
+
 
   useEffect(() => {
-    if (location) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { rootMargin: '0px 0px -100px 0px' }
+    );
+
+    const currentRef = sellerSectionRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isVisible) {
       searchSellersData();
     }
-  }, [location, filters]);
+  }, [isVisible, searchSellersData]);
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
 
-  if (!location) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Getting your location...</p>
-          <p className="text-sm text-gray-500 mt-2">Please enable location services to find nearby sellers</p>
+  const renderSkeletons = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      {[...Array(6)].map((_, index) => (
+        <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="animate-pulse">
+            <div className="h-48 bg-gray-200"></div>
+            <div className="p-4">
+              <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+              <div className="h-3 bg-gray-200 rounded w-full mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded w-5/6 mb-1"></div>
+              <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
         </div>
-      </div>
-    );
-  }
+      ))}
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+    <div ref={sellerSectionRef} className="min-h-[50vh] bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">Find Local Sellers</h1>
-          <p className="text-gray-700 text-lg">
-            Discover trusted sellers near you in {location.latitude.toFixed(4)}, {location.longitude.toFixed(4)}
-          </p>
+          {location ? (
+            <p className="text-gray-700 text-lg">
+              Discover trusted sellers near you in {location.city || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}
+            </p>
+          ) : (
+            <p className="text-gray-500 text-lg">Enable location to find sellers...</p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Filter Section */}
           <div className="lg:col-span-1">
             <div className="sticky top-24">
               <FilterSection onFilterChange={handleFilterChange} filters={filters} />
             </div>
           </div>
 
-          {/* Seller Listing */}
           <div className="lg:col-span-3">
             {loading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="text-center">
-                  <div className="w-12 h-12 border-4 border-dashed rounded-full animate-spin border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Searching for sellers...</p>
-                </div>
-              </div>
+              renderSkeletons()
             ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                <div className="flex items-center">
-                  <svg className="w-6 h-6 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-red-800">{error}</p>
-                </div>
-              </div>
+              <div className="text-red-600 text-center p-6 bg-red-50 rounded-lg">{error}</div>
             ) : sellers.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-md p-8 text-center">
-                <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                </svg>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No sellers found</h3>
-                <p className="text-gray-600">Try adjusting your filters or expanding your search area.</p>
-              </div>
+              <div className="text-center py-8 text-gray-600">No sellers found matching your criteria.</div>
             ) : (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    {sellers.length} seller{sellers.length !== 1 ? 's' : ''} found
-                  </h2>
-                  <div className="text-sm text-gray-600">
-                    Showing results sorted by {filters.sortBy === 'distance' ? 'distance' : filters.sortBy === 'rating' ? 'rating' : 'name'}
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {sellers.map((seller) => (
-                    <SellerCard key={seller.id} seller={seller} />
-                  ))}
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {sellers.map((seller) => (
+                  <SellerCard key={seller.id} seller={seller} />
+                ))}
               </div>
             )}
           </div>
@@ -234,4 +130,4 @@ const SellerListing = () => {
   );
 };
 
-export default SellerListing; 
+export default SellerListing;

@@ -1,14 +1,11 @@
 // src/pages/RegisterPage.js
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import LoadingSpinner from '../components/common/LoadingSpinner'; // Import the new spinner
 
 // --- Reusable Icon Components ---
 const TruckIcon = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M5 18H3c0-1.1.9-2 2-2v4c-1.1 0-2-.9-2-2z"/><path d="M19 18h2c0-1.1-.9-2-2-2v4c1.1 0 2-.9 2-2z"/><path d="M10 18h4"/><path d="M17 18v-5.17c0-1.1-.9-2-2-2H9c-1.1 0-2 .9-2 2V18"/><path d="M7 11V7.17c0-1.1.9-2 2-2h4l4 4"/><path d="M19 12h-4"/><path d="M10 18v4"/><path d="M14 18v4"/></svg>
-);
-
-const ArrowLeftIcon = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
 );
 
 // --- Password Strength Checker ---
@@ -72,16 +69,6 @@ const Input = ({ id, label, type = 'text', placeholder, value, onChange, error, 
                     <p className={`text-xs font-medium ${passwordStrength.color}`}>
                         Password strength: {passwordStrength.strength}
                     </p>
-                    <div className="mt-1 flex space-x-1">
-                        {['length', 'lowercase', 'uppercase', 'numbers', 'special'].map((check) => (
-                            <div
-                                key={check}
-                                className={`w-2 h-2 rounded-full ${
-                                    checkPasswordStrength(value)[check] ? 'bg-green-400' : 'bg-gray-300'
-                                }`}
-                            />
-                        ))}
-                    </div>
                 </div>
             )}
         </div>
@@ -99,8 +86,6 @@ const apiVendorRegister = async (registrationData) => {
         phone: String(registrationData.phone)
     };
     
-    console.log('Registration payload:', payload);
-    
     try {
         const response = await fetch(endpoint, { 
             method: 'POST', 
@@ -108,37 +93,15 @@ const apiVendorRegister = async (registrationData) => {
             body: JSON.stringify(payload) 
         });
         
-        console.log('Registration response status:', response.status);
-        
-        let responseData;
-        try {
-            responseData = await response.json();
-            console.log('Registration response data:', responseData);
-        } catch (parseError) {
-            console.log('Failed to parse response as JSON');
-            responseData = await response.text();
-            console.log('Response as text:', responseData);
-        }
+        const responseData = await response.json();
         
         if (!response.ok) {
             let errorMessage = 'Registration failed';
-            if (responseData) {
-                if (typeof responseData === 'string') {
-                    errorMessage = responseData;
-                } else if (typeof responseData === 'object') {
-                    if (responseData.message) {
-                        errorMessage = responseData.message;
-                    } else if (responseData.error) {
-                        errorMessage = responseData.error;
-                    } else if (responseData.detail) {
-                        errorMessage = responseData.detail;
-                    } else {
-                        const errorValues = Object.values(responseData).flat();
-                        if (errorValues.length > 0) {
-                            errorMessage = errorValues.join(', ');
-                        }
-                    }
-                }
+            if (responseData && responseData.detail) {
+                // Handle detailed validation errors from the backend
+                errorMessage = responseData.detail.map(err => `${err.loc[1]}: ${err.msg}`).join(', ');
+            } else if (responseData && responseData.message) {
+                errorMessage = responseData.message;
             }
             throw new Error(errorMessage);
         }
@@ -155,7 +118,7 @@ const apiVendorRegister = async (registrationData) => {
 const RegisterPage = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: '', // Business name
+        name: '',
         email: '',
         password: '',
         phone: ''
@@ -183,13 +146,12 @@ const RegisterPage = () => {
             newErrors.password = 'Password is required.';
         } else if (formData.password.length < 8) {
             newErrors.password = 'Password must be at least 8 characters.';
-        } else {
-            const strength = checkPasswordStrength(formData.password);
-            if (strength.strength === 'weak') {
-                newErrors.password = 'Please choose a stronger password. Consider using uppercase, lowercase, numbers, and special characters.';
-            }
         }
-        if (!formData.phone) newErrors.phone = 'Phone number is required.';
+        if (!formData.phone) {
+            newErrors.phone = 'Phone number is required.';
+        } else if (!/^\d{10}$/.test(formData.phone)) {
+            newErrors.phone = 'Phone number must be exactly 10 digits.';
+        }
         
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
@@ -201,13 +163,12 @@ const RegisterPage = () => {
             setIsSubmitting(true);
             setErrors({});
             try {
-                const result = await apiVendorRegister(formData);
-                console.log("Registration successful!", result);
+                await apiVendorRegister(formData);
                 alert("Registration complete! You can now log in.");
-                navigate('/login'); // Redirect to login page on success
+                navigate('/login');
             } catch (error) {
                 console.error("Registration error:", error);
-                setErrors({ form: error.message }); // Display form-wide error
+                setErrors({ form: error.message });
             } finally {
                 setIsSubmitting(false);
             }
@@ -226,23 +187,6 @@ const RegisterPage = () => {
                         </div>
                         <h2 className="text-3xl font-bold text-gray-800">Join SupplyLink</h2>
                         <p className="text-gray-500 mt-2">Create your vendor account</p>
-                    </div>
-                    
-                    {/* Password Security Notice */}
-                    <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="flex items-start">
-                            <svg className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div>
-                                <h4 className="text-sm font-medium text-blue-800 mb-1">Password Security</h4>
-                                <p className="text-xs text-blue-700">
-                                    If your browser shows a warning about the password being found in a database, 
-                                    this is a security feature to protect you. Consider using a unique, strong password 
-                                    that you haven't used elsewhere.
-                                </p>
-                            </div>
-                        </div>
                     </div>
                     
                     <form onSubmit={handleSubmit}>
@@ -278,7 +222,7 @@ const RegisterPage = () => {
                                 id="phone" 
                                 type="tel" 
                                 label="Phone Number" 
-                                placeholder="+91 12345 67890" 
+                                placeholder="10-digit mobile number" 
                                 value={formData.phone} 
                                 onChange={handleInputChange} 
                                 error={errors.phone} 
@@ -294,9 +238,9 @@ const RegisterPage = () => {
                         <button 
                             type="submit" 
                             disabled={isSubmitting} 
-                            className="w-full mt-8 bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors"
+                            className="w-full mt-8 bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed transition-colors flex justify-center items-center"
                         >
-                            {isSubmitting ? 'Creating Account...' : 'Create Vendor Account'}
+                            {isSubmitting ? <LoadingSpinner /> : 'Create Vendor Account'}
                         </button>
                     </form>
                 </div>

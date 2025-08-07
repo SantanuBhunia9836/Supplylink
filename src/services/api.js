@@ -4,66 +4,65 @@
  * This file contains functions to interact with the live backend API.
  */
 
-// --- BASE API URL ---
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://vend-sell.onrender.com';
+// --- IMPORTS ---
+import TokenManager from "../utils/tokenManager";
 
-// --- MOCK DATA ---
+// --- BASE API URL ---
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL || "https://vend-sell.onrender.com";
+
+// --- MOCK DATA (for functions without live endpoints yet) ---
 const MOCK_PRODUCTS = [
-    { id: 1, name: 'Onions', category: 'Vegetables', price: '₹30/kg' },
-    { id: 2, name: 'Tomatoes', category: 'Vegetables', price: '₹40/kg' },
-    { id: 3, name: 'Chicken Breast', category: 'Meat', price: '₹250/kg' },
-    { id: 4, name: 'Rice', category: 'Grains', price: '₹60/kg' },
-    { id: 5, name: 'Cooking Oil', category: 'Oils', price: '₹120/liter' },
-    { id: 6, name: 'Milk', category: 'Dairy', price: '₹60/liter' },
+  { id: 1, name: "Onions", category: "Vegetables", price: "₹30/kg" },
+  { id: 2, name: "Tomatoes", category: "Vegetables", price: "₹40/kg" },
+  { id: 3, name: "Chicken Breast", category: "Meat", price: "₹250/kg" },
 ];
 
 const MOCK_SHOP_DASHBOARD = {
-    stats: { activeOrders: 3, pendingDeliveries: 1, monthlySpend: 4150 },
-    recentOrders: [
-        { id: 'ORD-001', date: '2024-01-15', status: 'Completed', total: 1250 },
-        { id: 'ORD-002', date: '2024-01-14', status: 'Out for Delivery', total: 800 },
-        { id: 'ORD-003', date: '2024-01-13', status: 'Pending', total: 2100 },
-    ]
-};
-
-const MOCK_VENDOR_DASHBOARD = {
-    stats: { newRequests: 2, deliveriesToday: 5, weeklyRevenue: 12500 },
-    incomingRequests: [
-        { id: 'REQ-101', shopName: 'Pizza Palace', items: ['Onions', 'Tomatoes'], distance: '1.2km' },
-        { id: 'REQ-102', shopName: 'Curry Corner', items: ['Chicken Breast', 'Ginger', 'Garlic'], distance: '2.5km' },
-    ]
+  stats: { activeOrders: 3, pendingDeliveries: 1, monthlySpend: 4150 },
+  recentOrders: [
+    { id: "ORD-001", date: "2024-01-15", status: "Completed", total: 1250 },
+    {
+      id: "ORD-002",
+      date: "2024-01-14",
+      status: "Out for Delivery",
+      total: 800,
+    },
+  ],
 };
 
 // --- UTILITY FUNCTIONS ---
 const handleApiError = (response, responseData) => {
   if (!response.ok) {
-    let errorMessage = 'Request failed';
-    
-    // Handle different response formats
+    let errorMessage = "Request failed";
+
     if (responseData) {
-      if (typeof responseData === 'string') {
+      if (typeof responseData === "string") {
         errorMessage = responseData;
-      } else if (typeof responseData === 'object') {
-        // Handle object responses
+      } else if (typeof responseData === "object") {
         if (responseData.message) {
           errorMessage = responseData.message;
         } else if (responseData.error) {
           errorMessage = responseData.error;
         } else if (responseData.detail) {
-          errorMessage = responseData.detail;
+          if (typeof responseData.detail === "object") {
+            errorMessage = `Validation Error: ${JSON.stringify(
+              responseData.detail
+            )}`;
+          } else {
+            errorMessage = responseData.detail;
+          }
         } else if (Array.isArray(responseData)) {
-          errorMessage = responseData.join(', ');
+          errorMessage = responseData.join(", ");
         } else {
-          // Try to extract error from object values
           const errorValues = Object.values(responseData).flat();
           if (errorValues.length > 0) {
-            errorMessage = errorValues.join(', ');
+            errorMessage = errorValues.join(", ");
           }
         }
       }
     }
-    
-    // Add status code context for debugging
+
     if (response.status === 422) {
       errorMessage = `Validation Error: ${errorMessage}`;
     } else if (response.status === 401) {
@@ -73,428 +72,351 @@ const handleApiError = (response, responseData) => {
     } else {
       errorMessage = `Error (${response.status}): ${errorMessage}`;
     }
-    
+
     throw new Error(errorMessage);
   }
   return responseData;
 };
 
-// Helper function to parse validation errors
-const parseValidationErrors = (responseData) => {
-  if (responseData && responseData.detail && Array.isArray(responseData.detail)) {
-    const errors = responseData.detail.map(error => {
-      if (error.loc && error.loc.length > 0) {
-        return `${error.loc[error.loc.length - 1]}: ${error.msg}`;
-      }
-      return error.msg;
-    });
-    return errors.join(', ');
-  }
-  return 'Validation failed';
-};
+// Token management using TokenManager
+const getAuthToken = () => TokenManager.getToken();
+const setAuthToken = (token) => TokenManager.setToken(token);
+const clearAuthData = () => TokenManager.clearToken();
 
 // --- AUTHENTICATION APIS ---
-
-export const apiLogin = async ({ username, password, role }) => {
-  if (role !== 'vendor') throw new Error('Sorry, Shop login is not yet available. Please log in as a Vendor.');
-  
-  const endpoint = `${API_BASE_URL}/${role}/login/`;
-  
-  // Use form-encoded data since that's the working format
-  const formData = new URLSearchParams({
-    grant_type: 'password',
-    username: String(username),
-    password: String(password),
-    scope: '',
-    client_id: '',
-    client_secret: ''
-  });
-  
+export const getVendorStatus = async () => {
+  const endpoint = `${API_BASE_URL}/vendor/vendor-status`;
+  const token = getAuthToken();
   try {
-    const response = await fetch(endpoint, { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
-      }, 
-      body: formData,
-      credentials: "include"
+    const headers = { Accept: "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers,
+      credentials: "include",
     });
-    
-    let responseData;
-    try {
-      responseData = await response.json();
-    } catch (parseError) {
-      responseData = await response.text();
-    }
-    
-    // If successful, return the result
     if (response.ok) {
-      const result = handleApiError(response, responseData);
-      return { ...result, role };
-    }
-    
-    // Handle specific error cases
-    if (response.status === 401) {
-      throw new Error('Incorrect email or password. Please check your credentials.');
-    } else if (response.status === 422) {
-      const validationError = parseValidationErrors(responseData);
-      throw new Error(`Validation Error: ${validationError}`);
+      const data = await response.json();
+      return data;
     } else {
-      const result = handleApiError(response, responseData);
-      return { ...result, role };
+      return { is_login: false, is_seller: false };
     }
-    
   } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
-    throw error;
+    console.error("🚨 Vendor status check failed:", error);
+    return { is_login: false, is_seller: false };
   }
 };
 
-export const getProfile = async (token, role) => {
-    if (role !== 'vendor') throw new Error('Cannot fetch profile: Invalid user role specified.');
-    
-    const endpoint = `${API_BASE_URL}/${role}/profile/`;
-    
-    try {
-      const response = await fetch(endpoint, { 
-        method: 'GET', 
-        headers: { 
-          'Content-Type': 'application/json', 
-          
-          // 'Authorization': `Bearer ${token}` 
-        } ,
-        credentials: "include"
-      });
-      
-      let responseData;
-      try {
-        responseData = await response.json();
-      } catch (parseError) {
-        responseData = await response.text();
-      }
-      
-      if (!response.ok) {
-        let errorMessage = 'Failed to fetch profile.';
-        if (responseData) {
-          if (typeof responseData === 'string') {
-            errorMessage = responseData;
-          } else if (typeof responseData === 'object') {
-            if (responseData.message) {
-              errorMessage = responseData.message;
-            } else if (responseData.error) {
-              errorMessage = responseData.error;
-            } else if (responseData.detail) {
-              errorMessage = responseData.detail;
-            } else {
-              const errorValues = Object.values(responseData).flat();
-              if (errorValues.length > 0) {
-                errorMessage = errorValues.join(', ');
-              }
-            }
-          }
-        }
-        throw new Error(errorMessage);
-      }
-      
-      return responseData;
-    } catch (error) {
-      if (error.name === 'TypeError') {
-        throw new Error('Network error. Please check your connection.');
-      }
-      throw error;
+export const apiLogin = async ({ username, password, role }) => {
+  if (role !== "vendor")
+    throw new Error(
+      "Sorry, Shop login is not yet available. Please log in as a Vendor."
+    );
+  const endpoint = `${API_BASE_URL}/${role}/login/`;
+  try {
+    const formData = new URLSearchParams({
+      grant_type: "password",
+      username: String(username),
+      password: String(password),
+      scope: "",
+      client_id: "",
+      client_secret: "",
+    });
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+      },
+      body: formData,
+      credentials: "include",
+    });
+    const responseData = await response.json();
+    const result = handleApiError(response, responseData);
+    const authToken = result.access_token || result.token || result.accessToken;
+    if (authToken) {
+      setAuthToken(authToken);
     }
+    return { ...result, role, token: authToken };
+  } catch (error) {
+    console.error("🚨 Login failed:", error);
+    throw error;
+  }
 };
 
 export const apiLogout = async (token) => {
   const endpoint = `${API_BASE_URL}/vendor/logout`;
-  
   try {
-    const response = await fetch(endpoint, { 
-      method: 'POST', 
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+    await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token || getAuthToken()}`,
+      },
+      credentials: "include",
     });
-    
-    let responseData;
-    try {
-      responseData = await response.text(); // Return as string as specified
-    } catch (parseError) {
-      responseData = 'Logout successful';
-    }
-    
-    if (!response.ok) {
-      throw new Error('Logout failed');
-    }
-    
-    return responseData;
+    clearAuthData();
+    return "Logout successful";
   } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
+    clearAuthData();
     throw error;
   }
 };
 
-// --- SELLER REGISTRATION API ---
-
-export const apiSellerRegistration = async (sellerData) => {
-  const endpoint = `${API_BASE_URL}/seller/create`;
-  
-  const payload = {
-    email: String(sellerData.email),
-    phone: String(sellerData.phone),
-    id: parseInt(sellerData.id) || 0,
-    vendor_id: parseInt(sellerData.vendor_id) || 0,
-    created_at: new Date().toISOString(),
-    factories: Array.isArray(sellerData.factories) ? sellerData.factories : [],
-    products: Array.isArray(sellerData.products) ? sellerData.products : []
-  };
-  
+export const getVendorProfile = async () => {
+  const endpoint = `${API_BASE_URL}/vendor/profile`;
   try {
-    const response = await fetch(endpoint, { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify(payload) 
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      credentials: "include",
     });
     const responseData = await response.json();
     return handleApiError(response, responseData);
   } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
     throw error;
   }
 };
 
-// --- NEW DASHBOARD APIS ---
-
-/**
- * @description Fetches the dashboard summary data for a shop.
- * @returns {Promise<object>}
- */
-export const getShopDashboardData = async () => {
-    // TODO: Replace with a real API call when available.
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_SHOP_DASHBOARD), 1000));
-};
-
-/**
- * @description Fetches the dashboard summary data for a vendor.
- * @returns {Promise<object>}
- */
-export const getVendorDashboardData = async () => {
-    // TODO: Replace with a real API call when available.
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_VENDOR_DASHBOARD), 1000));
-};
-
-// --- OTHER APIS ---
-
-export const getProducts = async () => {
-    return new Promise(resolve => setTimeout(() => resolve(MOCK_PRODUCTS), 500));
-}
-
-export const placeOrder = async (items, userId) => {
-    return new Promise(resolve => setTimeout(() => resolve({ 
-      success: true, 
-      orderId: `ORD-${Math.floor(Math.random() * 900) + 100}` 
-    }), 1000));
-}
-
-// --- LOCATION API ---
-
-export const apiCreateLocation = async (locationData) => {
-  const endpoint = `${API_BASE_URL}/vendor/location/create`;
-  
+// --- VENDOR LOCATION API ---
+export const apiCreateVendorLocation = async (locationData) => {
+  const endpoint = `${API_BASE_URL}/vendor/location/create/`;
   const payload = {
+    ...locationData,
+    latitude: parseFloat(locationData.latitude) || 0,
+    longitude: parseFloat(locationData.longitude) || 0,
+  };
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    throw error;
+  }
+};
+
+// --- SELLER APIS ---
+
+export const searchSellers = async (latitude, longitude, filters = {}) => {
+  const endpoint = `${API_BASE_URL}/seller/search`;
+  try {
+    const payload = {
+      latitude: latitude,
+      longtitude: longitude,
+    };
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch (e) {
+        errorData = responseText;
+      }
+      return handleApiError(response, errorData);
+    }
+
+    const responseData = JSON.parse(responseText);
+    return responseData;
+  } catch (error) {
+    console.error("🚨 Seller search failed:", error);
+    throw error;
+  }
+};
+
+export const getSellerDetails = async (sellerId) => {
+  const endpoint = `${API_BASE_URL}/seller/profile/${sellerId}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to fetch seller details:", error);
+    throw error;
+  }
+};
+
+export const getSellerProductsList = async (sellerId) => {
+  const endpoint = `${API_BASE_URL}/seller/products-list?seller_id=${sellerId}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to fetch seller products:", error);
+    throw error;
+  }
+};
+
+export const apiCreateSeller = async (sellerData) => {
+  const endpoint = `${API_BASE_URL}/seller/create/`;
+  const payload = {
+    email: String(sellerData.email),
+    phone: String(sellerData.phone),
+  };
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const apiCreateFactory = async (factoryData) => {
+  const endpoint = `${API_BASE_URL}/seller/factories`;
+  const payload = {
+    seller_id: parseInt(factoryData.seller_id),
+    name: String(factoryData.name),
+    factory_type: String(factoryData.factory_type),
+    contact_number: String(factoryData.contact_number),
+  };
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      credentials: "include",
+      body: JSON.stringify(payload),
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const apiCreateFactoryLocation = async (locationData) => {
+  const endpoint = `${API_BASE_URL}/seller/factories/locations/`;
+  const payload = {
+    factory_id: parseInt(locationData.factory_id),
     address_line1: String(locationData.address_line1),
-    address_line2: String(locationData.address_line2 || ''),
+    address_line2: String(locationData.address_line2 || ""),
     city: String(locationData.city),
     state: String(locationData.state),
     country: String(locationData.country),
     postal_code: String(locationData.postal_code),
     latitude: parseFloat(locationData.latitude) || 0,
-    longitude: parseFloat(locationData.longitude) || 0
+    longitude: parseFloat(locationData.longitude) || 0,
   };
-  
-  try {
-    const response = await fetch(endpoint, { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify(payload) 
-    });
-    
-    let responseData;
-    try {
-      responseData = await response.json();
-    } catch (parseError) {
-      responseData = await response.text();
-    }
-    
-    if (!response.ok) {
-      let errorMessage = 'Location creation failed';
-      if (responseData) {
-        if (typeof responseData === 'string') {
-          errorMessage = responseData;
-        } else if (typeof responseData === 'object') {
-          if (responseData.message) {
-            errorMessage = responseData.message;
-          } else if (responseData.error) {
-            errorMessage = responseData.error;
-          } else if (responseData.detail) {
-            errorMessage = responseData.detail;
-          } else {
-            const errorValues = Object.values(responseData).flat();
-            if (errorValues.length > 0) {
-              errorMessage = errorValues.join(', ');
-            }
-          }
-        }
-      }
-      throw new Error(errorMessage);
-    }
-    
-    return responseData;
-  } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
-    throw error;
-  }
-};
-
-export const searchSellers = async (latitude, longitude, filters = {}) => {
-  const endpoint = `${API_BASE_URL}/seller/search`;
-  
-  try {
-    const queryParams = new URLSearchParams();
-    
-    // Add filter parameters if provided
-    if (filters.city) {
-      queryParams.append('city', filters.city);
-    }
-    if (filters.sellerType) {
-      queryParams.append('seller_type', filters.sellerType);
-    }
-    if (filters.range) {
-      queryParams.append('range', filters.range);
-    }
-    
-    const url = queryParams.toString() ? `${endpoint}?${queryParams.toString()}` : endpoint;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        latitude: latitude,
-        longtitude: longitude // Note: API uses 'longtitude' not 'longitude'
-      })
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail?.[0]?.msg || 'Search failed');
-    }
-    
-    const responseData = await response.text(); // API returns string
-    return responseData;
-  } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
-    throw error;
-  }
-};
-
-export const getVendorProfile = async (token) => {
-  const endpoint = `${API_BASE_URL}/vendor/profile`;
-  
   try {
     const response = await fetch(endpoint, {
-      method: 'GET',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        // 'Authorization': `Bearer ${token}`
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
       },
-      credentials: "include"
+      credentials: "include",
+      body: JSON.stringify(payload),
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail?.[0]?.msg || 'Failed to fetch profile');
-    }
-    
     const responseData = await response.json();
-    return responseData;
+    return handleApiError(response, responseData);
   } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
     throw error;
   }
 };
 
-export const getSellerProducts = async (factoryId, sellerId = null) => {
-  const endpoint = `${API_BASE_URL}/seller/products`;
-  
-  try {
-    const queryParams = new URLSearchParams();
-    queryParams.append('factory_id', factoryId);
-    if (sellerId) {
-      queryParams.append('seller_id', sellerId);
-    }
-    
-    const url = `${endpoint}?${queryParams.toString()}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail?.[0]?.msg || 'Failed to fetch products');
-    }
-    
-    const responseData = await response.json();
-    return responseData;
-  } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
-    throw error;
-  }
-};
-
-export const getSellerProduct = async (productId) => {
-  const endpoint = `${API_BASE_URL}/seller/products/${productId}`;
-  
+export const apiCreateProducts = async (products) => {
+  const endpoint = `${API_BASE_URL}/seller/products/create/`;
   try {
     const response = await fetch(endpoint, {
-      method: 'GET',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
-      }
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify(products),
+      credentials: "include",
     });
-    
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.detail?.[0]?.msg || 'Failed to fetch product');
-    }
-    
     const responseData = await response.json();
-    return responseData;
+    return handleApiError(response, responseData);
   } catch (error) {
-    if (error.name === 'TypeError') {
-      throw new Error('Network error. Please check your connection.');
-    }
+    console.error("🚨 Product creation failed:", error);
     throw error;
   }
+};
+
+// --- MOCK FUNCTIONS TO FIX COMPILATION ERRORS ---
+
+export const getShopDashboardData = async () => {
+  console.log("Mocked getShopDashboardData");
+  return new Promise((resolve) =>
+    setTimeout(() => resolve(MOCK_SHOP_DASHBOARD), 500)
+  );
+};
+
+export const testApiConnection = async () => {
+  console.log("Mocked testApiConnection");
+  return new Promise((resolve) =>
+    setTimeout(
+      () =>
+        resolve({
+          status: "ok",
+          message: "Mock API connection is successful.",
+        }),
+      500
+    )
+  );
+};
+
+export const getProducts = async () => {
+  console.log("Mocked getProducts");
+  return new Promise((resolve) =>
+    setTimeout(() => resolve(MOCK_PRODUCTS), 500)
+  );
+};
+
+export const placeOrder = async (items) => {
+  console.log("Mocked placeOrder:", items);
+  return new Promise((resolve) =>
+    setTimeout(
+      () => resolve({ success: true, orderId: `MOCK-ORD-${Date.now()}` }),
+      500
+    )
+  );
 };

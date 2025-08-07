@@ -14,12 +14,21 @@
 
     <!--
       THE FIX IS HERE:
-      We are adding your friend's API URL (https://vend-sell.onrender.com) to the 'connect-src' directive.
-      This tells the browser that it is a trusted source and allows your React app to make fetch requests to it.
+      This single, updated CSP tag now includes all necessary domains.
+      - Your backend API (vend-sell.onrender.com)
+      - Geocoding services (nominatim, bigdatacloud)
+      - The map tile server (*.tile.openstreetmap.org)
+      - Image placeholders (placehold.co)
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src 'self' https://vend-sell.onrender.com https://nominatim.openstreetmap.org https://api.bigdatacloud.net https://cors-anywhere.herokuapp.com; script-src 'self'; style-src 'self' 'unsafe-inline';"
+      content="
+        default-src 'self';
+        connect-src 'self' https://vend-sell.onrender.com https://nominatim.openstreetmap.org https://api.bigdatacloud.net https://*.tile.openstreetmap.org;
+        script-src 'self';
+        style-src 'self' 'unsafe-inline' https://unpkg.com/leaflet@1.7.1/dist/leaflet.css;
+        img-src 'self' data: https://*.tile.openstreetmap.org https://unpkg.com/leaflet@1.7.1/dist/images/ https://placehold.co;
+      "
     />
 
     <title>SupplyLink</title>
