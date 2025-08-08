@@ -1,4 +1,3 @@
-// src/pages/Dashboard.js
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
@@ -9,20 +8,15 @@ import Sidebar from '../components/layout/Sidebar';
 import ShopOverview from './dashboard/ShopOverview';
 import CreateOrder from './dashboard/CreateOrder';
 import ShopOrders from './dashboard/ShopOrders';
-
-// A new placeholder component for the Seller Dashboard
-const SellerDashboard = () => (
-    <div className="bg-white p-6 rounded-lg shadow">
-        <h2 className="text-2xl font-bold mb-4">Seller Dashboard</h2>
-        <p>Welcome to your seller dashboard! Full features for managing your factory, products, and orders are coming soon.</p>
-    </div>
-);
+// --- FIX: Import the new SellerDashboard ---
+import SellerDashboard from './dashboard/seller/SellerDashboard';
 
 
 const Dashboard = () => {
     const { user } = useContext(AuthContext);
     const location = useLocation();
 
+    // This logic is for the 'shop' role sidebar. It's not used by the seller view.
     const getCurrentPage = () => {
         const path = location.pathname;
         if (path.includes('/create-order')) return 'create-order';
@@ -33,15 +27,13 @@ const Dashboard = () => {
     const currentPage = getCurrentPage();
 
     const renderPage = () => {
-        // THE KEY CHANGE IS HERE: Prioritize the seller view
+        // Prioritize the seller view
         if (user.is_seller) {
-            return (
-                <Routes>
-                    <Route path="/*" element={<SellerDashboard />} />
-                </Routes>
-            );
+            // The new SellerDashboard handles its own internal state and layout
+            return <SellerDashboard />;
         }
 
+        // Fallback for the 'shop' role
         if (user.role === 'shop') {
             return (
                 <Routes>
@@ -67,12 +59,19 @@ const Dashboard = () => {
         }
     };
 
+    // --- FIX: Conditionally set padding on the main content area ---
+    // The seller dashboard has its own padding, so we remove the parent's padding for a correct fit.
+    const mainContentClass = user.is_seller ? "flex-1 overflow-y-auto" : "flex-1 overflow-y-auto p-6";
+
+
     return (
         <div className="flex h-screen bg-gray-100 font-sans">
-            <Sidebar activePage={currentPage} />
+            {/* Conditionally render sidebar. It will be hidden for sellers. */}
+            {!user.is_seller && <Sidebar activePage={currentPage} />}
+            
             <div className="flex-1 flex flex-col">
                 <Header pageTitle={getPageTitle()} />
-                <main className="flex-1 overflow-y-auto p-6">
+                <main className={mainContentClass}>
                     {renderPage()}
                 </main>
             </div>

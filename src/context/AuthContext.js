@@ -1,7 +1,6 @@
 // src/context/AuthContext.js
 import React, { useState, createContext, useCallback, useEffect } from 'react';
 import { apiLogin, apiLogout, getVendorProfile, getVendorStatus } from '../services/api';
-import TokenManager from '../utils/tokenManager';
 
 // --- Full Screen Loader Component ---
 const FullScreenLoader = () => (
@@ -29,11 +28,9 @@ export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => TokenManager.getToken());
   const [loading, setLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
-  const [initialScreenLoading, setInitialScreenLoading] = useState(true);
   const [error, setError] = useState(null);
   const [profileCompletion, setProfileCompletion] = useState({
     profile_done: 0,
@@ -42,65 +39,40 @@ export const AuthProvider = ({ children }) => {
     seller_profile_creds: []
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setInitialScreenLoading(false);
-    }, 2000); // Show loader for 2 seconds
-
-    return () => clearTimeout(timer);
-  }, []);
-
+  // This function now only clears React state.
   const clearUserData = useCallback(() => {
     setUser(null);
-    setToken(null);
     setProfileCompletion({
       profile_done: 0,
       profile_creds: [],
       seller_profile_done: 0,
       seller_profile_creds: []
     });
-    TokenManager.clearToken();
   }, []);
 
-  const logout = useCallback(async () => {
-    setLogoutLoading(true);
-    try {
-      await apiLogout(token);
-    } catch (err) {
-      console.error("Logout API call failed", err);
-    } finally {
-      clearUserData();
-      setLogoutLoading(false);
-    }
-  }, [clearUserData, token]);
-
+  // This function now relies entirely on the backend to validate the session cookie.
   const validateSession = useCallback(async () => {
     setAuthLoading(true);
     try {
       const status = await getVendorStatus();
       
-      if (!status.is_login) {
-        clearUserData();
-      } else {
+      if (status.is_login) {
+        // If logged in, fetch user data.
         const profileData = await getVendorProfile();
-        
         setUser({
           ...profileData,
           is_seller: status.is_seller,
           role: 'vendor',
         });
-        
         setProfileCompletion({
           profile_done: status.profile_done || 0,
           profile_creds: status.profile_creds || [],
           seller_profile_done: status.seller_profile_done || 0,
           seller_profile_creds: status.seller_profile_creds || []
         });
-        
-        const existingToken = TokenManager.getToken();
-        if (!token && existingToken) {
-          setToken(existingToken);
-        }
+      } else {
+        // If not logged in, clear any existing user data.
+        clearUserData();
       }
     } catch (err) {
       console.error("Session validation failed", err);
@@ -108,28 +80,21 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setAuthLoading(false);
     }
-  }, [clearUserData, token]);
+  }, [clearUserData]);
 
-  // *** FIX: The dependency array is now empty. This ensures validateSession
-  // runs ONLY ONCE when the app first loads, and not after a logout. ***
+  // On every initial page load, we ask the backend to validate the session.
   useEffect(() => {
     validateSession();
-  }, []);
+  }, [validateSession]);
 
   const login = async (credentials) => {
     setLoading(true);
     setError(null);
     try {
-      const responseData = await apiLogin(credentials);
-      const authToken = responseData.token; 
-      if (!authToken) throw new Error("Login successful, but no token was provided.");
-
-      setToken(authToken);
-      TokenManager.setToken(authToken);
-      TokenManager.setUserRole(credentials.role);
-      
+      // The backend will set the session cookie upon successful login.
+      await apiLogin(credentials);
+      // After login, re-validate the session to fetch user data.
       await validateSession();
-
     } catch (err) {
       setError(err.message);
       throw err;
@@ -138,9 +103,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const logout = useCallback(async () => {
+    setLogoutLoading(true);
+    try {
+      // Tell the backend to clear the session cookie.
+      await apiLogout();
+    } catch (err) {
+      console.error("Logout API call failed", err);
+    } finally {
+      // Clear user data from the frontend state.
+      clearUserData();
+      setLogoutLoading(false);
+    }
+  }, [clearUserData]);
+
   const value = { 
     user, 
-    token, 
     loading, 
     logoutLoading, 
     error, 
@@ -151,7 +129,7 @@ export const AuthProvider = ({ children }) => {
     validateSession 
   };
 
-  if (initialScreenLoading) {
+  if (authLoading) {
     return <FullScreenLoader />;
   }
 

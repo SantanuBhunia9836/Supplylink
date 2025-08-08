@@ -92,7 +92,7 @@ const SellerListing = () => {
     <div ref={sellerSectionRef} className="min-h-[50vh] bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">Find Local Sellers</h1>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">Find Your Nearby Sellers</h1>
           {location ? (
             <p className="text-gray-700 text-lg">
               Discover trusted sellers near you in {location.city || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}

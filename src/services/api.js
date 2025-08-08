@@ -2,10 +2,8 @@
 
 /**
  * This file contains functions to interact with the live backend API.
+ * This version relies solely on backend-managed session cookies for authentication.
  */
-
-// --- IMPORTS ---
-import TokenManager from "../utils/tokenManager";
 
 // --- BASE API URL ---
 const API_BASE_URL =
@@ -78,28 +76,18 @@ const handleApiError = (response, responseData) => {
   return responseData;
 };
 
-// Token management using TokenManager
-const getAuthToken = () => TokenManager.getToken();
-const setAuthToken = (token) => TokenManager.setToken(token);
-const clearAuthData = () => TokenManager.clearToken();
 
 // --- AUTHENTICATION APIS ---
 export const getVendorStatus = async () => {
   const endpoint = `${API_BASE_URL}/vendor/vendor-status`;
-  const token = getAuthToken();
   try {
-    const headers = { Accept: "application/json" };
-    if (token) {
-      headers["Authorization"] = `Bearer ${token}`;
-    }
     const response = await fetch(endpoint, {
       method: "GET",
-      headers,
-      credentials: "include",
+      headers: { Accept: "application/json" },
+      credentials: "include", // This sends the session cookie
     });
     if (response.ok) {
-      const data = await response.json();
-      return data;
+      return await response.json();
     } else {
       return { is_login: false, is_seller: false };
     }
@@ -131,37 +119,30 @@ export const apiLogin = async ({ username, password, role }) => {
         Accept: "application/json",
       },
       body: formData,
-      credentials: "include",
+      credentials: "include", // Important for the backend to be able to set the cookie
     });
     const responseData = await response.json();
-    const result = handleApiError(response, responseData);
-    const authToken = result.access_token || result.token || result.accessToken;
-    if (authToken) {
-      setAuthToken(authToken);
-    }
-    return { ...result, role, token: authToken };
+    return handleApiError(response, responseData);
   } catch (error) {
     console.error("🚨 Login failed:", error);
     throw error;
   }
 };
 
-export const apiLogout = async (token) => {
+export const apiLogout = async () => {
   const endpoint = `${API_BASE_URL}/vendor/logout`;
   try {
     await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token || getAuthToken()}`,
       },
-      credentials: "include",
+      credentials: "include", // Sends the cookie to be cleared
     });
-    clearAuthData();
     return "Logout successful";
   } catch (error) {
-    clearAuthData();
-    throw error;
+    console.error("🚨 Logout failed but proceeding with frontend state clearing.", error);
+    // We don't re-throw the error, allowing frontend logout to complete regardless.
   }
 };
 
@@ -172,9 +153,8 @@ export const getVendorProfile = async () => {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
-      credentials: "include",
+      credentials: "include", // Sends the session cookie for authentication
     });
     const responseData = await response.json();
     return handleApiError(response, responseData);
@@ -182,6 +162,25 @@ export const getVendorProfile = async () => {
     throw error;
   }
 };
+
+// --- NEW FUNCTION TO GET SELLER-SPECIFIC PROFILE ---
+export const getSellerProfile = async () => {
+  const endpoint = `${API_BASE_URL}/seller/profile`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include", // Sends the session cookie for authentication
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    throw error;
+  }
+};
+
 
 // --- VENDOR LOCATION API ---
 export const apiCreateVendorLocation = async (locationData) => {
@@ -196,7 +195,6 @@ export const apiCreateVendorLocation = async (locationData) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       credentials: "include",
       body: JSON.stringify(payload),
@@ -294,7 +292,6 @@ export const apiCreateSeller = async (sellerData) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       body: JSON.stringify(payload),
       credentials: "include",
@@ -319,7 +316,6 @@ export const apiCreateFactory = async (factoryData) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       credentials: "include",
       body: JSON.stringify(payload),
@@ -349,7 +345,6 @@ export const apiCreateFactoryLocation = async (locationData) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       credentials: "include",
       body: JSON.stringify(payload),
@@ -368,7 +363,6 @@ export const apiCreateProducts = async (products) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
       },
       body: JSON.stringify(products),
       credentials: "include",

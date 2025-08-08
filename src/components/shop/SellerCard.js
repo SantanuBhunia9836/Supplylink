@@ -1,21 +1,49 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const SellerCard = ({ seller }) => {
+// --- Reusable Icon Component for Category ---
+const TagIcon = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+    </svg>
+);
+
+
+const SellerCard = ({ seller: sellerData }) => {
   const navigate = useNavigate();
 
+  const seller = sellerData.seller;
+  // The backend response for distance is in KM, so we handle it as such.
+  const distanceInKm = sellerData.distance;
+
   const handleViewDetails = () => {
-    // The seller object from the search API is the top-level object
     navigate(`/seller/${seller.id}`);
   };
 
-  const sellerName = seller?.vendor?.name || 'Seller Name';
+  // --- Safely access nested data ---
+  const businessName = seller?.factories?.[0]?.name || 'N/A';
   const businessType = seller?.factories?.[0]?.factory_type || 'Business';
-  const city = seller?.factories?.[0]?.location?.city || 'City';
-  const state = seller?.factories?.[0]?.location?.state || 'State';
-  // Assuming distance and rating will be added to the API response later
-  const distance = seller.distance || 'N/A';
-  const rating = seller.rating || 'N/A';
+  const city = seller?.factories?.[0]?.location?.city || 'N/A';
+  const state = seller?.factories?.[0]?.location?.state || 'N/A';
+  const rating = seller.rating || '4.5'; 
+  // --- FIX: Corrected path to access category from the products array ---
+  const category = seller?.products?.[0]?.category || 'General Supplies';
+
+  // This function now correctly handles input in Kilometers.
+  const formatDistance = (km) => {
+    if (typeof km !== 'number') {
+      return 'N/A';
+    }
+    if (km < 1) {
+      // If less than 1km, show in meters
+      return `${Math.round(km * 1000)} m`;
+    }
+    // Otherwise, show in kilometers with one decimal place
+    return `${km.toFixed(1)} km`;
+  };
+
+  const displayDistance = formatDistance(distanceInKm);
 
   return (
     <div className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 transform hover:-translate-y-1">
@@ -23,17 +51,17 @@ const SellerCard = ({ seller }) => {
         {/* Seller Header */}
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900 text-lg truncate" title={sellerName}>{sellerName}</h3>
+              <h3 className="font-semibold text-gray-900 text-lg">{businessName}</h3>
               <p className="text-sm text-gray-600 capitalize">{businessType}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-1 flex-shrink-0">
+          <div className="flex items-center space-x-1">
             <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8-2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
@@ -45,7 +73,7 @@ const SellerCard = ({ seller }) => {
         <div className="space-y-2 mb-4">
           <div className="flex items-center text-sm text-gray-600">
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 111.314 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
             <span>{city}, {state}</span>
@@ -55,7 +83,13 @@ const SellerCard = ({ seller }) => {
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{distance} km away</span>
+            <span>{displayDistance} away</span>
+          </div>
+
+          {/* Category display */}
+          <div className="flex items-center text-sm text-gray-600">
+            <TagIcon className="w-4 h-4 mr-2" />
+            <span className="capitalize">{category}</span>
           </div>
         </div>
 
