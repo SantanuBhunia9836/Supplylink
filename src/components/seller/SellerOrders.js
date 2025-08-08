@@ -1,3 +1,4 @@
+// src/components/Seller/
 import React from 'react';
 
 const SellerOrders = () => (

@@ -76,8 +76,61 @@ const handleApiError = (response, responseData) => {
   return responseData;
 };
 
-
 // --- AUTHENTICATION APIS ---
+export const apiVendorRegister = async (registrationData) => {
+  const endpoint = `${API_BASE_URL}/vendor/create`;
+
+  const payload = {
+    name: String(registrationData.name),
+    email: String(registrationData.email),
+    password: String(registrationData.password),
+  };
+
+  // Handle phone number logic for Google Sign-In
+  if (registrationData.phone) {
+    payload.phone = String(registrationData.phone);
+  } else if (registrationData.password.startsWith("google_sub_")) {
+    payload.phone = "0000000000";
+  }
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    // For Google sign-in, we accept a 422/400 error if the user already exists.
+    // The subsequent login call will handle authentication.
+    if (!response.ok && ![422, 400].includes(response.status)) {
+      const responseData = await response.json();
+      let errorMessage = "Registration failed";
+      if (responseData && responseData.detail) {
+        if (Array.isArray(responseData.detail)) {
+          errorMessage = responseData.detail
+            .map((err) => `${err.loc[1]}: ${err.msg}`)
+            .join(", ");
+        } else {
+          errorMessage = responseData.detail;
+        }
+      } else if (responseData && responseData.message) {
+        errorMessage = responseData.message;
+      }
+      throw new Error(errorMessage);
+    }
+    return response.json();
+  } catch (error) {
+    if (error.name === "TypeError") {
+      throw new Error("Network error. Please check your connection.");
+    }
+    // Don't re-throw for existing user errors during Google sign-up
+    if (error.message.includes("already exists")) {
+      return;
+    }
+    throw error;
+  }
+};
+
 export const getVendorStatus = async () => {
   const endpoint = `${API_BASE_URL}/vendor/vendor-status`;
   try {
@@ -129,6 +182,29 @@ export const apiLogin = async ({ username, password, role }) => {
   }
 };
 
+export const apiGoogleLogin = async (authCode) => {
+  // The new endpoint for handling Google OAuth
+  const endpoint = `${API_BASE_URL}/vendor/oauth/login`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      // The backend expects an object with the authorization code from Google
+      body: JSON.stringify({ code: authCode }),
+      credentials: "include", // Important for the backend to set the session cookie
+    });
+    const responseData = await response.json();
+    // Use the existing error handler
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Google login failed:", error);
+    throw error;
+  }
+};
+
 export const apiLogout = async () => {
   const endpoint = `${API_BASE_URL}/vendor/logout`;
   try {
@@ -141,7 +217,10 @@ export const apiLogout = async () => {
     });
     return "Logout successful";
   } catch (error) {
-    console.error("🚨 Logout failed but proceeding with frontend state clearing.", error);
+    console.error(
+      "🚨 Logout failed but proceeding with frontend state clearing.",
+      error
+    );
     // We don't re-throw the error, allowing frontend logout to complete regardless.
   }
 };
@@ -180,7 +259,6 @@ export const getSellerProfile = async () => {
     throw error;
   }
 };
-
 
 // --- VENDOR LOCATION API ---
 export const apiCreateVendorLocation = async (locationData) => {
@@ -280,6 +358,44 @@ export const getSellerProductsList = async (sellerId) => {
     throw error;
   }
 };
+
+// --- NEWLY ADDED FUNCTIONS TO FIX ERRORS ---
+export const getSellerProducts = async (sellerId, factoryId) => {
+  const endpoint = `${API_BASE_URL}/seller/products?seller_id=${sellerId}&factory_id=${factoryId}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to fetch seller products by factory:", error);
+    throw error;
+  }
+};
+
+export const getProductDetails = async (productId) => {
+  const endpoint = `${API_BASE_URL}/seller/products/${productId}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to fetch product details:", error);
+    throw error;
+  }
+};
+// --- END OF NEWLY ADDED FUNCTIONS ---
 
 export const apiCreateSeller = async (sellerData) => {
   const endpoint = `${API_BASE_URL}/seller/create/`;

@@ -1,74 +1,82 @@
 // src/context/LocationContext.js
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useCallback } from "react";
 
 export const LocationContext = createContext();
 
+// Reverse geocoding function to get city from coordinates
+const getCityFromCoords = async (latitude, longitude) => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+    );
+    if (!response.ok) throw new Error("Reverse geocoding failed");
+    const data = await response.json();
+    return (
+      data.address?.city ||
+      data.address?.town ||
+      data.address?.village ||
+      "Unknown Area"
+    );
+  } catch (error) {
+    console.error("Could not fetch city name:", error);
+    return "Unknown Area";
+  }
+};
+
 export const LocationProvider = ({ children }) => {
-  const [location, setLocation] = useState(() => {
-    const savedLocation = localStorage.getItem('userLocation');
-    return savedLocation ? JSON.parse(savedLocation) : null;
-  });
+  const [location, setLocation] = useState(null);
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
 
-  const getCurrentLocation = () => {
+  // Use useCallback to prevent this function from being recreated on every render
+  const getCurrentLocation = useCallback(() => {
+    // Prevent multiple requests if one is already in progress
+    if (locationLoading) return;
+
     setLocationLoading(true);
     setLocationError(null);
 
     if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser.');
+      setLocationError("Geolocation is not supported by this browser.");
       setLocationLoading(false);
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const newLocation = {
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          timestamp: Date.now()
-        };
-        setLocation(newLocation);
-        localStorage.setItem('userLocation', JSON.stringify(newLocation));
-        setLocationLoading(false);
-      },
-      (error) => {
-        let errorMessage = 'Failed to get location.';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable location services.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            errorMessage = 'Location information unavailable.';
-            break;
-          case error.TIMEOUT:
-            errorMessage = 'Location request timed out.';
-            break;
-          default:
-            errorMessage = 'An unknown error occurred while getting location.';
-        }
-        setLocationError(errorMessage);
-        setLocationLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 300000 // 5 minutes
-      }
-    );
-  };
+    const onSuccess = async (position) => {
+      const { latitude, longitude } = position.coords;
+      const city = await getCityFromCoords(latitude, longitude);
 
-  const clearLocation = () => {
-    setLocation(null);
-    localStorage.removeItem('userLocation');
-  };
+      const newLocation = { latitude, longitude, city };
+      setLocation(newLocation);
+      setLocationLoading(false);
+    };
+
+    const onError = (error) => {
+      let errorMessage = "An unknown error occurred.";
+      if (error.code === error.PERMISSION_DENIED) {
+        errorMessage =
+          "Location access denied. Please enable it in your browser settings to find nearby sellers.";
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        errorMessage = "Location information is currently unavailable.";
+      } else if (error.code === error.TIMEOUT) {
+        errorMessage = "Location request timed out.";
+      }
+      setLocationError(errorMessage);
+      setLocationLoading(false);
+    };
+
+    navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 0, // Force a fresh location check
+    });
+  }, [locationLoading]); // Dependency ensures function is stable
 
   const value = {
     location,
     locationLoading,
     locationError,
     getCurrentLocation,
-    clearLocation
   };
 
   return (
@@ -81,7 +89,7 @@ export const LocationProvider = ({ children }) => {
 export const useLocation = () => {
   const context = useContext(LocationContext);
   if (!context) {
-    throw new Error('useLocation must be used within a LocationProvider');
+    throw new Error("useLocation must be used within a LocationProvider");
   }
   return context;
-}; 
+};

@@ -16,10 +16,13 @@ import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import SellerRegistration from "./pages/SellerRegistration";
 import SellerDetailPage from "./pages/SellerDetailPage";
+import ProductDetailPage from "./pages/ProductDetailPage"; // --- 1. IMPORT THE NEW PAGE ---
 import { ToastContainer } from "react-toastify";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-// import 'react-toastify/dist/ReactToastify.css';
+// import 'react-toastify/dist/ReactToastify.css'; // Make sure this is uncommented if you have style issues
 
+// This component contains your app's routing logic.
+// It needs to be a child of AuthProvider to access the `user` context.
 function AppContent() {
   const { user } = useContext(AuthContext);
 
@@ -30,12 +33,16 @@ function AppContent() {
         <Route path="/" element={<LandingPage />} />
         <Route
           path="/login"
-          element={!user ? <LoginPage /> : <Navigate to="/" />}
+          element={!user ? <LoginPage /> : <Navigate to="/dashboard" />}
         />
         <Route
           path="/register"
-          element={!user ? <RegisterPage /> : <Navigate to="/" />}
+          element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />}
         />
+        <Route path="/seller/:id" element={<SellerDetailPage />} />
+
+        {/* --- 2. ADD THE ROUTE FOR THE PRODUCT DETAIL PAGE --- */}
+        <Route path="/product/:id" element={<ProductDetailPage />} />
 
         {/* Protected routes */}
         <Route
@@ -46,7 +53,6 @@ function AppContent() {
           path="/seller-registration"
           element={user ? <SellerRegistration /> : <Navigate to="/login" />}
         />
-        <Route path="/seller/:id" element={<SellerDetailPage />} />
 
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/" />} />
@@ -55,12 +61,13 @@ function AppContent() {
   );
 }
 
+// This is the main App component that sets up all the providers.
 function App() {
   return (
     <ErrorBoundary>
-      <LocationProvider>
-        <AuthProvider>
-          <GoogleOAuthProvider clientId="YOUR_GOOGLE_CLIENT_ID">
+      <GoogleOAuthProvider clientId="189626540628-goi86smbh3m8slu6i3pdka007kkvim09.apps.googleusercontent.com">
+        <LocationProvider>
+          <AuthProvider>
             <AppContent />
             <ToastContainer
               position="bottom-right"
@@ -74,9 +81,9 @@ function App() {
               pauseOnHover
               theme="light"
             />
-          </GoogleOAuthProvider>
-        </AuthProvider>
-      </LocationProvider>
+          </AuthProvider>
+        </LocationProvider>
+      </GoogleOAuthProvider>
     </ErrorBoundary>
   );
 }

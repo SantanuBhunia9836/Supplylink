@@ -1,13 +1,18 @@
 // src/context/AuthContext.js
-import React, { useState, createContext, useCallback, useEffect } from 'react';
-import { apiLogin, apiLogout, getVendorProfile, getVendorStatus } from '../services/api';
+import React, { useState, createContext, useCallback, useEffect } from "react";
+import {
+  apiLogin,
+  apiLogout,
+  getVendorProfile,
+  getVendorStatus,
+} from "../services/api";
+// --- 1. IMPORT useLocation ---
+import { useLocation } from "./LocationContext";
 
-// --- Full Screen Loader Component ---
+// --- Full Screen Loader Component (No changes needed here) ---
 const FullScreenLoader = () => (
   <div className="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[9999]">
-    <div className="text-white text-3xl font-bold mb-4">
-      SupplyLink
-    </div>
+    <div className="text-white text-3xl font-bold mb-4">SupplyLink</div>
     <div className="w-64 h-1 bg-gray-700 rounded-full overflow-hidden">
       <div className="h-1 bg-blue-500 rounded-full animate-loader-progress"></div>
     </div>
@@ -23,10 +28,12 @@ const FullScreenLoader = () => (
   </div>
 );
 
-
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
+  // --- 2. GET THE LOCATION FUNCTION AND DATA ---
+  const { location, getCurrentLocation } = useLocation();
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [logoutLoading, setLogoutLoading] = useState(false);
@@ -36,42 +43,38 @@ export const AuthProvider = ({ children }) => {
     profile_done: 0,
     profile_creds: [],
     seller_profile_done: 0,
-    seller_profile_creds: []
+    seller_profile_creds: [],
   });
 
-  // This function now only clears React state.
   const clearUserData = useCallback(() => {
     setUser(null);
     setProfileCompletion({
       profile_done: 0,
       profile_creds: [],
       seller_profile_done: 0,
-      seller_profile_creds: []
+      seller_profile_creds: [],
     });
   }, []);
 
-  // This function now relies entirely on the backend to validate the session cookie.
   const validateSession = useCallback(async () => {
     setAuthLoading(true);
     try {
       const status = await getVendorStatus();
-      
+
       if (status.is_login) {
-        // If logged in, fetch user data.
         const profileData = await getVendorProfile();
         setUser({
           ...profileData,
           is_seller: status.is_seller,
-          role: 'vendor',
+          role: "vendor",
         });
         setProfileCompletion({
           profile_done: status.profile_done || 0,
           profile_creds: status.profile_creds || [],
           seller_profile_done: status.seller_profile_done || 0,
-          seller_profile_creds: status.seller_profile_creds || []
+          seller_profile_creds: status.seller_profile_creds || [],
         });
       } else {
-        // If not logged in, clear any existing user data.
         clearUserData();
       }
     } catch (err) {
@@ -82,7 +85,14 @@ export const AuthProvider = ({ children }) => {
     }
   }, [clearUserData]);
 
-  // On every initial page load, we ask the backend to validate the session.
+  // --- 3. ADD THIS useEffect TO REQUEST LOCATION ON APP LOAD ---
+  useEffect(() => {
+    // Only request location if it hasn't been fetched yet
+    if (!location) {
+      getCurrentLocation();
+    }
+  }, [location, getCurrentLocation]);
+
   useEffect(() => {
     validateSession();
   }, [validateSession]);
@@ -91,9 +101,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
-      // The backend will set the session cookie upon successful login.
       await apiLogin(credentials);
-      // After login, re-validate the session to fetch user data.
       await validateSession();
     } catch (err) {
       setError(err.message);
@@ -106,27 +114,25 @@ export const AuthProvider = ({ children }) => {
   const logout = useCallback(async () => {
     setLogoutLoading(true);
     try {
-      // Tell the backend to clear the session cookie.
       await apiLogout();
     } catch (err) {
       console.error("Logout API call failed", err);
     } finally {
-      // Clear user data from the frontend state.
       clearUserData();
       setLogoutLoading(false);
     }
   }, [clearUserData]);
 
-  const value = { 
-    user, 
-    loading, 
-    logoutLoading, 
-    error, 
-    authLoading, 
+  const value = {
+    user,
+    loading,
+    logoutLoading,
+    error,
+    authLoading,
     profileCompletion,
-    login, 
-    logout, 
-    validateSession 
+    login,
+    logout,
+    validateSession,
   };
 
   if (authLoading) {

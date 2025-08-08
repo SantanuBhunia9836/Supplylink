@@ -2,8 +2,8 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { testApiConnection } from '../services/api';
 import { toast } from 'react-toastify';
+import GoogleLogin from './GoogleLogin'; // Import the GoogleLogin component
 
 // --- Reusable Icon Components ---
 const TruckIcon = (props) => (
@@ -63,7 +63,6 @@ const LoginPage = () => {
             try {
                 await login(formData);
                 toast.success("Login successful! Redirecting...");
-                // The navigation will be handled by the AuthContext state change
             } catch (err) {
                 console.error("Login attempt failed on page:", err);
                 toast.error(err.message || "An unexpected error occurred during login.");
@@ -94,8 +93,6 @@ const LoginPage = () => {
                                 {validationErrors.password && <p className="mt-1 text-xs text-red-600">{validationErrors.password}</p>}
                             </div>
                             
-                            {/* The inline error message is removed in favor of toasts */}
-
                             <div>
                                 <button 
                                     type="submit" 
@@ -107,6 +104,9 @@ const LoginPage = () => {
                             </div>
                         </div>
                     </form>
+
+                    {/* Render the GoogleLogin component here */}
+                    <GoogleLogin />
 
                     <div className="mt-6 text-center">
                         <p className="text-sm text-gray-600">

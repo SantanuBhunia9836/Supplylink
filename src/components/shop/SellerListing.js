@@ -1,78 +1,73 @@
 // src/components/shop/SellerListing.js
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from '../../context/LocationContext';
-import { searchSellers } from '../../services/api';
-import FilterSection from './FilterSection';
-import SellerCard from './SellerCard';
+import React, { useState, useEffect, useCallback } from "react";
+// --- LocationContext now provides locationLoading and locationError ---
+import { useLocation } from "../../context/LocationContext";
+import { searchSellers } from "../../services/api";
+import FilterSection from "./FilterSection";
+import SellerCard from "./SellerCard";
 
 const SellerListing = () => {
-  const { location } = useLocation();
+  // --- 1. GET THE FULL LOCATION STATE ---
+  const { location, locationLoading, locationError } = useLocation();
   const [sellers, setSellers] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [filters, setFilters] = useState({ city: '', sellerType: '', range: '', sortBy: 'distance' });
-  
-  const [isVisible, setIsVisible] = useState(false);
-  const sellerSectionRef = useRef(null);
+  const [searchInitiated, setSearchInitiated] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState(null);
+  const [filters, setFilters] = useState({
+    city: "",
+    sellerType: "",
+    range: "",
+    sortBy: "distance",
+  });
 
+  // --- 2. REWORK THE SEARCH FUNCTION ---
+  // This function now depends only on location and filters.
   const searchSellersData = useCallback(async () => {
-    if (!location) {
-        setError("Please enable location services to find sellers near you.");
-        return;
-    }
+    if (!location) return; // Guard clause
 
-    setLoading(true);
-    setError(null);
+    setSearchLoading(true);
+    setSearchError(null);
     try {
-      const sellersData = await searchSellers(location.latitude, location.longitude, filters);
+      const sellersData = await searchSellers(
+        location.latitude,
+        location.longitude,
+        filters
+      );
       setSellers(sellersData);
     } catch (err) {
-      setError(err.message || "An error occurred while fetching sellers.");
-      setSellers([]); // Clear sellers on error
+      setSearchError(
+        err.message || "An error occurred while fetching sellers."
+      );
+      setSellers([]);
     } finally {
-      setLoading(false);
+      setSearchLoading(false);
     }
-  }, [location, filters]);
+  }, [location, filters]); // Dependencies for the search
 
-
+  // --- 3. UPDATE useEffect TO TRIGGER SEARCH ---
+  // This effect runs whenever the location or filters change.
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(entry.target);
-        }
-      },
-      { rootMargin: '0px 0px -100px 0px' }
-    );
-
-    const currentRef = sellerSectionRef.current;
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (isVisible) {
+    if (location && !searchInitiated) {
+      searchSellersData();
+      setSearchInitiated(true); // Ensure initial search runs only once
+    } else if (searchInitiated) {
+      // This part handles re-searching when filters are changed
       searchSellersData();
     }
-  }, [isVisible, searchSellersData]);
+  }, [location, filters, searchSellersData, searchInitiated]);
 
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
   };
 
+  // Skeleton loader remains the same
   const renderSkeletons = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {[...Array(6)].map((_, index) => (
-        <div key={index} className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div
+          key={index}
+          className="bg-white rounded-lg shadow-md overflow-hidden"
+        >
           <div className="animate-pulse">
             <div className="h-48 bg-gray-200"></div>
             <div className="p-4">
@@ -89,37 +84,55 @@ const SellerListing = () => {
   );
 
   return (
-    <div ref={sellerSectionRef} className="min-h-[50vh] bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+    // We no longer need the ref and intersection observer
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">Find Your Nearby Sellers</h1>
-          {location ? (
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            Find Your Nearby Sellers
+          </h1>
+          {/* --- 4. IMPROVE UI MESSAGES BASED ON LOCATION STATE --- */}
+          {locationLoading && (
+            <p className="text-gray-500 text-lg">Getting your location...</p>
+          )}
+          {locationError && (
+            <p className="text-red-600 text-lg">{locationError}</p>
+          )}
+          {location && !locationError && (
             <p className="text-gray-700 text-lg">
-              Discover trusted sellers near you in {location.city || `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`}
+              Discover trusted sellers near you
+              {location.city ? ` in ${location.city}.` : "."}
             </p>
-          ) : (
-            <p className="text-gray-500 text-lg">Enable location to find sellers...</p>
           )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
             <div className="sticky top-24">
-              <FilterSection onFilterChange={handleFilterChange} filters={filters} />
+              <FilterSection
+                onFilterChange={handleFilterChange}
+                filters={filters}
+              />
             </div>
           </div>
 
           <div className="lg:col-span-3">
-            {loading ? (
+            {/* --- 5. RENDER BASED ON SEARCH STATE --- */}
+            {searchLoading ? (
               renderSkeletons()
-            ) : error ? (
-              <div className="text-red-600 text-center p-6 bg-red-50 rounded-lg">{error}</div>
-            ) : sellers.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">No sellers found matching your criteria.</div>
+            ) : searchError ? (
+              <div className="text-red-600 text-center p-6 bg-red-50 rounded-lg">
+                {searchError}
+              </div>
+            ) : sellers.length === 0 && searchInitiated ? (
+              <div className="text-center py-8 text-gray-600">
+                No sellers found matching your criteria.
+              </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {/* --- FIX: Using seller.seller_id as the unique key --- */}
                 {sellers.map((seller) => (
-                  <SellerCard key={seller.id} seller={seller} />
+                  <SellerCard key={seller.seller_id} seller={seller} />
                 ))}
               </div>
             )}

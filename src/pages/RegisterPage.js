@@ -1,8 +1,10 @@
 // src/pages/RegisterPage.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import LoadingSpinner from "../components/common/LoadingSpinner"; // Import the new spinner
-import GoogleLogin from "./GoogleLogin"; // Correct relative path for same folder
+import { toast } from "react-toastify";
+import { apiVendorRegister } from "../services/api";
+import LoadingSpinner from "../components/common/LoadingSpinner";
+import GoogleLogin from "./GoogleLogin";
 
 // --- Reusable Icon Components ---
 const TruckIcon = (props) => (
@@ -29,9 +31,6 @@ const TruckIcon = (props) => (
   </svg>
 );
 
-{
-  /* <GoogleLogin/> */
-}
 // --- Password Strength Checker ---
 const checkPasswordStrength = (password) => {
   const checks = {
@@ -143,49 +142,6 @@ const Input = ({
     </div>
   );
 };
-// --- API Registration Function ---
-const apiVendorRegister = async (registrationData) => {
-  const API_BASE_URL =
-    process.env.REACT_APP_API_URL || "https://vend-sell.onrender.com";
-  const endpoint = `${API_BASE_URL}/vendor/create`;
-
-  const payload = {
-    name: String(registrationData.name),
-    email: String(registrationData.email),
-    password: String(registrationData.password),
-    phone: String(registrationData.phone),
-  };
-
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const responseData = await response.json();
-
-    if (!response.ok) {
-      let errorMessage = "Registration failed";
-      if (responseData && responseData.detail) {
-        // Handle detailed validation errors from the backend
-        errorMessage = responseData.detail
-          .map((err) => `${err.loc[1]}: ${err.msg}`)
-          .join(", ");
-      } else if (responseData && responseData.message) {
-        errorMessage = responseData.message;
-      }
-      throw new Error(errorMessage);
-    }
-
-    return responseData;
-  } catch (error) {
-    if (error.name === "TypeError") {
-      throw new Error("Network error. Please check your connection.");
-    }
-    throw error;
-  }
-};
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -236,10 +192,11 @@ const RegisterPage = () => {
       setErrors({});
       try {
         await apiVendorRegister(formData);
-        alert("Registration complete! You can now log in.");
+        toast.success("Registration complete! You can now log in.");
         navigate("/login");
       } catch (error) {
         console.error("Registration error:", error);
+        toast.error(error.message || "An unexpected error occurred.");
         setErrors({ form: error.message });
       } finally {
         setIsSubmitting(false);
@@ -318,7 +275,8 @@ const RegisterPage = () => {
             >
               {isSubmitting ? <LoadingSpinner /> : "Create Vendor Account"}
             </button>
-            {/* Add GoogleLogin button below the submit button */}
+            
+            {/* Render the GoogleLogin component here */}
             <GoogleLogin />
           </form>
         </div>

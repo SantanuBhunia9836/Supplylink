@@ -9,7 +9,7 @@ import ShopOverview from './dashboard/ShopOverview';
 import CreateOrder from './dashboard/CreateOrder';
 import ShopOrders from './dashboard/ShopOrders';
 // --- FIX: Import the new SellerDashboard ---
-import SellerDashboard from './dashboard/seller/SellerDashboard';
+import SellerDashboard from '../components/seller/SellerDashboard';
 
 
 const Dashboard = () => {
