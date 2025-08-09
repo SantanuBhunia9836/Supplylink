@@ -1,24 +1,51 @@
 // src/pages/SellerDetailPage.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getSellerProducts } from "../services/api"; // Use the new API function
+import { getSellerProducts } from "../services/api";
+import { CartContext } from "../context/CartContext";
+
+// --- Helper Icon Components for the new controller ---
+const PlusIcon = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    {...props}
+  >
+    <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
+  </svg>
+);
+
+const MinusIcon = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 20 20"
+    fill="currentColor"
+    {...props}
+  >
+    <path
+      fillRule="evenodd"
+      d="M4 10a.75.75 0 01.75-.75h10.5a.75.75 0 010 1.5H4.75A.75.75 0 014 10z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
 
 const SellerDetailPage = () => {
-  const { id: sellerId } = useParams(); // Rename for clarity
+  const { id: sellerId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Immediately get seller data from navigation state, passed from SellerCard
+  const { cartItems, addToCart, updateQuantity, removeFromCart } =
+    useContext(CartContext);
+
   const [seller, setSeller] = useState(location.state?.seller || null);
   const [products, setProducts] = useState([]);
-  // Loading is now only for products
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // This effect now only fetches products using data from the seller object
     const loadProductData = async () => {
-      // Ensure we have seller data from the navigation state
       if (!seller) {
         setError(
           "Seller information is missing. Please return to the previous page and select a seller."
@@ -26,8 +53,6 @@ const SellerDetailPage = () => {
         setLoading(false);
         return;
       }
-
-      // Extract the factory_id from the seller object
       const factoryId = seller.factory_id;
       if (!factoryId) {
         setError("Could not find a factory for this seller.");
@@ -38,19 +63,26 @@ const SellerDetailPage = () => {
       setLoading(true);
       setError(null);
       try {
-        // Call the API with both sellerId and factoryId
         const productsData = await getSellerProducts(sellerId, factoryId);
         setProducts(productsData);
       } catch (err) {
         setError(err.message || "Failed to load products.");
-        console.error("Error loading product data:", err);
       } finally {
         setLoading(false);
       }
     };
 
     loadProductData();
-  }, [seller, sellerId]); // The effect runs when the component mounts with seller data
+  }, [seller, sellerId]);
+
+  const handleQuantityUpdate = (productId, currentQuantity, change) => {
+    const newQuantity = currentQuantity + change;
+    if (newQuantity <= 0) {
+      removeFromCart(productId);
+    } else {
+      updateQuantity(productId, newQuantity);
+    }
+  };
 
   const getFullAddress = (loc) => {
     if (!loc) return "Address not available";
@@ -65,14 +97,12 @@ const SellerDetailPage = () => {
       .filter(Boolean)
       .join(", ");
   };
-
-  // A simple skeleton loader for the product cards
   const ProductSkeleton = () => (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-md border border-gray-100 overflow-hidden">
       <div className="animate-pulse">
-        <div className="h-48 bg-gray-200"></div>
-        <div className="p-6">
-          <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+        <div className="h-40 bg-gray-200"></div>
+        <div className="p-4">
+          <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
           <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
           <div className="h-8 bg-gray-200 rounded w-full"></div>
         </div>
@@ -105,9 +135,7 @@ const SellerDetailPage = () => {
       </div>
     );
   }
-
   if (!seller) {
-    // This will show if the page was loaded directly without state
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-blue-600"></div>
@@ -116,7 +144,7 @@ const SellerDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
         <button
           onClick={() => navigate(-1)}
@@ -137,12 +165,11 @@ const SellerDetailPage = () => {
           </svg>
           Back
         </button>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 mb-6 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-6 mb-6 border border-gray-100">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
                   <svg
                     className="w-8 h-8 text-blue-600"
                     fill="none"
@@ -158,66 +185,111 @@ const SellerDetailPage = () => {
                   </svg>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">
+                  <h1 className="text-2xl font-bold text-gray-900">
                     {seller.factory_name}
                   </h1>
-                  <p className="text-lg text-gray-600 capitalize">
+                  <p className="text-md text-gray-600 capitalize">
                     {seller.factory_type || "Seller"}
                   </p>
                 </div>
               </div>
             </div>
-
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-gray-100">
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-8">
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
+              <h2 className="text-2xl font-bold text-gray-800 mb-6">
                 Products
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {loading ? (
                   [...Array(3)].map((_, i) => <ProductSkeleton key={i} />)
                 ) : products.length > 0 ? (
-                  products.map((product) => (
-                    <div
-                      key={product.id}
-                      onClick={() => navigate(`/product/${product.id}`)}
-                      className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:border-blue-200 transform hover:-translate-y-1 overflow-hidden cursor-pointer"
-                    >
-                      <div className="aspect-w-1 aspect-h-1 bg-gray-200">
-                        <img
-                          src={`https://placehold.co/400x300/EBF4FF/76A9FA?text=${product.name.replace(
-                            /\s/g,
-                            "+"
-                          )}`}
-                          alt={product.name}
-                          className="w-full h-48 object-cover"
-                        />
-                      </div>
-                      <div className="p-6">
-                        <h3 className="font-bold text-gray-900 mb-2 text-lg truncate">
-                          {product.name}
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-3 capitalize">
-                          {product.category}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            ₹{product.price}/{product.qunatity_unit}
-                          </span>
-                          <span
-                            className={`px-3 py-1 text-xs rounded-full font-medium ${
-                              product.stock_quantity > 0
-                                ? "bg-green-100 text-green-800 border border-green-200"
-                                : "bg-red-100 text-red-800 border border-red-200"
-                            }`}
-                          >
-                            {product.stock_quantity > 0
-                              ? "In Stock"
-                              : "Out of Stock"}
-                          </span>
+                  products.map((product) => {
+                    const itemInCart = cartItems.find(
+                      (item) => item.id === product.id
+                    );
+
+                    return (
+                      <div
+                        key={product.id}
+                        className="bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow duration-300 border border-gray-200 flex flex-col"
+                      >
+                        <div
+                          onClick={() => navigate(`/product/${product.id}`)}
+                          className="cursor-pointer flex-grow"
+                        >
+                          <img
+                            src={`https://placehold.co/400x300/EBF4FF/76A9FA?text=${product.name.replace(
+                              /\s/g,
+                              "+"
+                            )}`}
+                            alt={product.name}
+                            className="w-full h-40 object-cover rounded-t-xl"
+                          />
+                          <div className="p-4">
+                            <h3 className="font-bold text-gray-800 text-md truncate">
+                              {product.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-2 capitalize">
+                              {product.category}
+                            </p>
+                            <span className="text-lg font-semibold text-gray-900">
+                              ₹{product.price}
+                              <span className="text-sm font-normal text-gray-600">
+                                /{product.qunatity_unit}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+                          {itemInCart ? (
+                            <div className="flex items-center justify-center">
+                              <div className="flex items-center rounded-lg border border-gray-300 bg-white">
+                                <button
+                                  onClick={() =>
+                                    handleQuantityUpdate(
+                                      product.id,
+                                      itemInCart.quantity,
+                                      -1
+                                    )
+                                  }
+                                  className="p-2 text-gray-600 rounded-l-md hover:bg-gray-100 transition-colors"
+                                  aria-label="Decrease quantity"
+                                >
+                                  <MinusIcon className="w-4 h-4" />
+                                </button>
+                                <span className="w-10 text-center font-semibold text-gray-800 text-md border-x">
+                                  {itemInCart.quantity}
+                                </span>
+                                <button
+                                  onClick={() =>
+                                    handleQuantityUpdate(
+                                      product.id,
+                                      itemInCart.quantity,
+                                      1
+                                    )
+                                  }
+                                  className="p-2 text-blue-600 rounded-r-md hover:bg-gray-100 transition-colors"
+                                  aria-label="Increase quantity"
+                                >
+                                  <PlusIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => addToCart(product)}
+                              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+                              disabled={product.stock_quantity === 0}
+                            >
+                              {product.stock_quantity > 0
+                                ? "Add to Cart"
+                                : "Out of Stock"}
+                            </button>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="text-gray-500 md:col-span-2 xl:col-span-3 text-center py-8">
                     No products found for this seller.
@@ -226,16 +298,15 @@ const SellerDetailPage = () => {
               </div>
             </div>
           </div>
-
           <div className="lg:col-span-1">
-            <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-6 mb-6 border border-gray-100">
+            <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100 sticky top-24">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Contact Information
               </h3>
               <div className="space-y-3">
                 <div className="flex items-start">
                   <svg
-                    className="w-5 h-5 text-gray-400 mr-3 mt-1 flex-shrink-0"
+                    className="w-5 h-5 text-gray-400 mr-3 mt-1 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -257,10 +328,9 @@ const SellerDetailPage = () => {
                     {getFullAddress(seller.factory_location)}
                   </span>
                 </div>
-                {/* Assuming phone and email are part of the seller object passed in state */}
                 <div className="flex items-center">
                   <svg
-                    className="w-5 h-5 text-gray-400 mr-3"
+                    className="w-5 h-5 text-gray-400 mr-3 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -278,7 +348,7 @@ const SellerDetailPage = () => {
                 </div>
                 <div className="flex items-center">
                   <svg
-                    className="w-5 h-5 text-gray-400 mr-3"
+                    className="w-5 h-5 text-gray-400 mr-3 shrink-0"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"

@@ -2,10 +2,9 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import { apiCreateProducts } from "../../services/api";
-import ProductList from "./ProductList"; // The reusable form fields
+import ProductList from "./ProductList";
 import LoadingSpinner from "../common/LoadingSpinner";
 
-// A reusable modal component to wrap our forms
 const Modal = ({ children, title, onClose }) => (
   <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -23,7 +22,7 @@ const Modal = ({ children, title, onClose }) => (
   </div>
 );
 
-const AddProductForm = ({ onComplete, onClose }) => {
+const AddProductForm = ({ onComplete, onClose, sellerId, factoryId }) => {
   const [products, setProducts] = useState([
     {
       name: "",
@@ -65,22 +64,31 @@ const AddProductForm = ({ onComplete, onClose }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Basic validation
+      // Add a check to ensure the IDs were passed correctly
+      if (!sellerId || !factoryId) {
+        throw new Error(
+          "Could not identify the seller or factory. Please refresh the page and try again."
+        );
+      }
+
       for (const p of products) {
         if (!p.name || !p.price || !p.stock_quantity) {
           throw new Error("Please fill all required fields for each product.");
         }
       }
-      // Reformat for API
+
+      // Add seller_id and factory_id to each product object
       const productData = products.map((p) => ({
         ...p,
         price: parseFloat(p.price),
         stock_quantity: parseInt(p.stock_quantity, 10),
+        seller_id: sellerId,
+        factory_id: factoryId,
       }));
 
       await apiCreateProducts(productData);
       toast.success("Products added successfully!");
-      onComplete(); // This will close the modal and refresh the dashboard
+      onComplete();
     } catch (err) {
       toast.error(err.message || "Failed to add products.");
     } finally {

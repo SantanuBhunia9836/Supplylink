@@ -1,5 +1,5 @@
 // src/App.js
-import React, { useContext } from "react";
+import React, { useContext, useState } from "react"; // Import useState
 import "./App.css";
 import {
   BrowserRouter as Router,
@@ -9,78 +9,95 @@ import {
 } from "react-router-dom";
 import { AuthContext, AuthProvider } from "./context/AuthContext";
 import { LocationProvider } from "./context/LocationContext";
+import { CartProvider } from "./context/CartContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+
+// Page Imports
 import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import RegisterPage from "./pages/RegisterPage";
 import LoginPage from "./pages/LoginPage";
 import SellerRegistration from "./pages/SellerRegistration";
 import SellerDetailPage from "./pages/SellerDetailPage";
-import ProductDetailPage from "./pages/ProductDetailPage"; // --- 1. IMPORT THE NEW PAGE ---
+import ProductDetailPage from "./pages/ProductDetailPage";
+import CartPage from "./pages/CartPage";
+
+// Component Imports
 import { ToastContainer } from "react-toastify";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-// import 'react-toastify/dist/ReactToastify.css'; // Make sure this is uncommented if you have style issues
+import MobileNavigation from "./components/layout/MobileNavigation"; // 1. Import MobileNavigation
+import LocationPanel from "./components/common/LocationPanel"; // 2. Import LocationPanel
 
-// This component contains your app's routing logic.
-// It needs to be a child of AuthProvider to access the `user` context.
 function AppContent() {
   const { user } = useContext(AuthContext);
+  // 3. Manage state for the location panel here
+  const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(false);
 
   return (
     <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route
-          path="/login"
-          element={!user ? <LoginPage /> : <Navigate to="/dashboard" />}
-        />
-        <Route
-          path="/register"
-          element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />}
-        />
-        <Route path="/seller/:id" element={<SellerDetailPage />} />
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-grow">
+          <Routes>
+            {/* ... your other routes remain unchanged ... */}
+            <Route path="/" element={<LandingPage />} />
+            <Route
+              path="/login"
+              element={!user ? <LoginPage /> : <Navigate to="/dashboard" />}
+            />
+            <Route
+              path="/register"
+              element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />}
+            />
+            <Route path="/seller/:id" element={<SellerDetailPage />} />
+            <Route path="/product/:id" element={<ProductDetailPage />} />
+            <Route path="/cart" element={<CartPage />} />
+            <Route
+              path="/dashboard/*"
+              element={user ? <Dashboard /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/seller-registration"
+              element={user ? <SellerRegistration /> : <Navigate to="/login" />}
+            />
+            <Route path="*" element={<Navigate to="/" />} />
+          </Routes>
+        </main>
 
-        {/* --- 2. ADD THE ROUTE FOR THE PRODUCT DETAIL PAGE --- */}
-        <Route path="/product/:id" element={<ProductDetailPage />} />
-
-        {/* Protected routes */}
-        <Route
-          path="/dashboard/*"
-          element={user ? <Dashboard /> : <Navigate to="/login" />}
+        {/* 4. Render MobileNavigation and LocationPanel globally */}
+        <MobileNavigation
+          onLocationClick={() => setIsLocationPanelOpen(true)}
         />
-        <Route
-          path="/seller-registration"
-          element={user ? <SellerRegistration /> : <Navigate to="/login" />}
+        <LocationPanel
+          isOpen={isLocationPanelOpen}
+          onClose={() => setIsLocationPanelOpen(false)}
+          onSuccess={() => setIsLocationPanelOpen(false)}
         />
-
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+      </div>
     </Router>
   );
 }
 
-// This is the main App component that sets up all the providers.
 function App() {
   return (
     <ErrorBoundary>
       <GoogleOAuthProvider clientId="189626540628-goi86smbh3m8slu6i3pdka007kkvim09.apps.googleusercontent.com">
         <LocationProvider>
           <AuthProvider>
-            <AppContent />
-            <ToastContainer
-              position="bottom-right"
-              autoClose={5000}
-              hideProgressBar={false}
-              newestOnTop={false}
-              closeOnClick
-              rtl={false}
-              pauseOnFocusLoss
-              draggable
-              pauseOnHover
-              theme="light"
-            />
+            <CartProvider>
+              <AppContent />
+              <ToastContainer
+                position="bottom-right"
+                autoClose={5000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+              />
+            </CartProvider>
           </AuthProvider>
         </LocationProvider>
       </GoogleOAuthProvider>

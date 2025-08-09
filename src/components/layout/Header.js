@@ -1,6 +1,6 @@
 // src/components/layout/Header.js
 import React, { useContext, useState } from 'react';
-import { AuthContext } from '../../context/AuthContext'; // Adjust path as needed
+import { AuthContext } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProfileCompletionIndicator from '../common/ProfileCompletionIndicator';
 
@@ -26,7 +26,6 @@ const Header = ({ pageTitle }) => {
 
   return (
     <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6">
-      {/* Mobile Menu Button */}
       <div className="md:hidden">
         <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="text-gray-500 hover:text-gray-700">
           <MenuIcon className="w-6 h-6" />
@@ -51,52 +50,31 @@ const Header = ({ pageTitle }) => {
               onClick={() => setProfileOpen(!profileOpen)} 
               className="flex items-center space-x-2"
             >
-              <div className="relative flex-shrink-0">
-                <UserIcon className="w-10 h-10 text-gray-600 bg-gray-200 rounded-full p-1"/>
-                {/* FIX: The indicator is now positioned correctly */}
-                <div className="absolute -top-1 -right-1">
-                  <ProfileCompletionIndicator 
-                    profileCompletion={profileCompletion}
-                    size={24}
-                    strokeWidth={3}
-                    showPercentage={true}
-                  />
+              {/* --- ALIGNMENT FIX --- */}
+              <div className="relative w-10 h-10">
+                {/* 1. Base layer for the icon background */}
+                <div className="w-full h-full bg-gray-200 rounded-full flex items-center justify-center">
+                    <UserIcon className="w-6 h-6 text-gray-600"/>
+                </div>
+                {/* 2. Absolutely positioned layer for the completion ring */}
+                <div className="absolute top-0 left-0 w-full h-full">
+                    <ProfileCompletionIndicator 
+                        profileCompletion={profileCompletion}
+                        size={40} // Same size as the container (w-10 h-10)
+                        strokeWidth={3}
+                        showPercentage={false}
+                    />
                 </div>
               </div>
+
               <span className="text-gray-700 font-medium hidden sm:block">
                 {user?.name || 'User'}
               </span>
             </button>
             {profileOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-10 border border-gray-200">
-                <div className="py-2">
-                  <div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100">
-                    <p className="font-medium">{user?.name || user?.businessName}</p>
-                    <p className="text-gray-500 capitalize">{user?.role}</p>
-                  </div>
-                  <button
-                    onClick={() => navigate('/dashboard')}
-                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
-                  >
-                    <UserIcon className="w-4 h-4"/>
-                    <span>Dashboard</span>
-                  </button>
-                  <button
-                    onClick={() => navigate('/seller-registration')}
-                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left border-t border-gray-100"
-                  >
-                    <UserIcon className="w-4 h-4"/>
-                    <span>Become a Seller</span>
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    disabled={logoutLoading}
-                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left disabled:opacity-50"
-                  >
-                    {logoutLoading ? <SpinnerIcon className="w-4 h-4" /> : <LogOutIcon className="w-4 h-4"/>}
-                    <span>{logoutLoading ? 'Logging out...' : 'Logout'}</span>
-                  </button>
-                </div>
+                {/* Dropdown content remains the same */}
+                <div className="py-2"><div className="px-4 py-2 text-sm text-gray-700 border-b border-gray-100"><p className="font-medium">{user?.name || user?.businessName}</p><p className="text-gray-500 capitalize">{user?.role}</p></div><button onClick={() => navigate('/dashboard')} className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"><UserIcon className="w-4 h-4"/><span>Dashboard</span></button><button onClick={() => navigate('/seller-registration')} className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left border-t border-gray-100"><UserIcon className="w-4 h-4"/><span>Become a Seller</span></button><button onClick={handleLogout} disabled={logoutLoading} className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left disabled:opacity-50">{logoutLoading ? <SpinnerIcon className="w-4 h-4" /> : <LogOutIcon className="w-4 h-4"/>}<span>{logoutLoading ? 'Logging out...' : 'Logout'}</span></button></div>
               </div>
             )}
           </div>
@@ -108,23 +86,9 @@ const Header = ({ pageTitle }) => {
         )}
       </div>
 
-      {/* Mobile Menu Panel */}
       {mobileMenuOpen && (
         <div className="absolute top-16 left-0 w-full bg-white border-b border-gray-200 md:hidden z-20">
-          <div className="p-4">
-            <button
-              onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }}
-              className="block w-full text-left py-2 px-3 text-gray-700 hover:bg-gray-100 rounded"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => { navigate('/seller-registration'); setMobileMenuOpen(false); }}
-              className="block w-full text-left py-2 px-3 text-gray-700 hover:bg-gray-100 rounded mt-1"
-            >
-              Become a Seller
-            </button>
-          </div>
+          <div className="p-4"><button onClick={() => { navigate('/dashboard'); setMobileMenuOpen(false); }} className="block w-full text-left py-2 px-3 text-gray-700 hover:bg-gray-100 rounded">Dashboard</button><button onClick={() => { navigate('/seller-registration'); setMobileMenuOpen(false); }} className="block w-full text-left py-2 px-3 text-gray-700 hover:bg-gray-100 rounded mt-1">Become a Seller</button></div>
         </div>
       )}
     </header>

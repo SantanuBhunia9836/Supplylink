@@ -1,6 +1,6 @@
 // src/components/seller/SellerProducts.js
 import React, { useState } from "react";
-import AddProductForm from "./AddProductForm"; // Import the new form component
+import AddProductForm from "./AddProductForm";
 
 const PlusIcon = (props) => (
   <svg
@@ -20,12 +20,21 @@ const PlusIcon = (props) => (
   </svg>
 );
 
-const SellerProducts = ({ products, onProductsUpdate }) => {
+const SellerProducts = ({ profile, onProductsUpdate }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Extract products for display
+  const products = profile?.products || [];
+
+  // --- CORRECTED ID PATHS ---
+  // The seller ID is at the top level of the profile object.
+  const sellerId = profile?.id;
+  // The factory ID path was already correct.
+  const factoryId = profile?.factories?.[0]?.id;
 
   const handleFormComplete = () => {
     setIsModalOpen(false);
-    onProductsUpdate(); // Refresh the profile data in the dashboard
+    onProductsUpdate();
   };
 
   return (
@@ -34,6 +43,9 @@ const SellerProducts = ({ products, onProductsUpdate }) => {
         <AddProductForm
           onComplete={handleFormComplete}
           onClose={() => setIsModalOpen(false)}
+          // Pass the correctly extracted IDs to the form
+          sellerId={sellerId}
+          factoryId={factoryId}
         />
       )}
 
@@ -54,9 +66,9 @@ const SellerProducts = ({ products, onProductsUpdate }) => {
 
       <div className="bg-white p-6 rounded-lg border border-gray-200">
         <h3 className="font-semibold text-gray-800 mb-4 text-lg">
-          Current Product Summary ({products?.length || 0})
+          Current Product Summary ({products.length})
         </h3>
-        {products && products.length > 0 ? (
+        {products.length > 0 ? (
           <ul className="divide-y divide-gray-200">
             {products.map((p) => (
               <li key={p.id} className="py-3 flex justify-between items-center">

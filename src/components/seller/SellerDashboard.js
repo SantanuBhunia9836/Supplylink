@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getSellerProfile } from "../../services/api";
 import LoadingSpinner from "../common/LoadingSpinner";
+import SellerHomepage from "./SellerHomepage"; // Import the new homepage component
 import SellerProfile from "./SellerProfile";
 import SellerProducts from "./SellerProducts";
 import SellerOrders from "./SellerOrders";
@@ -12,6 +13,16 @@ import {
 } from "./ProfileCompletionForms";
 
 // Icon Components
+const HomeIcon = (props) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    {...props}
+  >
+    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+  </svg>
+);
 const UserIcon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -86,7 +97,7 @@ const SellerDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState("homepage"); // Default tab is now homepage
   const [activeForm, setActiveForm] = useState(null);
   const [missingInfo, setMissingInfo] = useState({
     factory: false,
@@ -124,10 +135,9 @@ const SellerDashboard = () => {
 
   const handleFormComplete = () => {
     setActiveForm(null);
-    fetchProfile(); // Refetch profile to update lock status and profile info
+    fetchProfile();
   };
 
-  // Profile is considered complete for unlocking tabs once the factory and its location are added.
   const isProfileComplete =
     !missingInfo.factory && !missingInfo.factoryLocation;
 
@@ -162,9 +172,12 @@ const SellerDashboard = () => {
     }
   };
 
+
   const renderContent = () => {
     if (!profile) return null;
     switch (activeTab) {
+      case "homepage":
+        return <SellerHomepage profile={profile} />;
       case "profile":
         return (
           <SellerProfile
@@ -174,24 +187,16 @@ const SellerDashboard = () => {
           />
         );
       case "products":
+        // MODIFIED: Pass the entire profile object instead of just products
         return (
-          <SellerProducts
-            products={profile.products}
-            onProductsUpdate={fetchProfile}
-          />
+          <SellerProducts profile={profile} onProductsUpdate={fetchProfile} />
         );
       case "orders":
         return <SellerOrders />;
       case "deliveries":
         return <SellerDeliveries />;
       default:
-        return (
-          <SellerProfile
-            profile={profile}
-            missingInfo={missingInfo}
-            onAction={setActiveForm}
-          />
-        );
+        return <SellerHomepage profile={profile} />;
     }
   };
 
@@ -201,9 +206,10 @@ const SellerDashboard = () => {
       <div className="text-center text-red-500 font-semibold p-10">{error}</div>
     );
 
-  // Reusable tab button component with locking logic
   const TabButton = ({ tabName, icon: Icon, label }) => {
-    const isLocked = !isProfileComplete && tabName !== "profile";
+    // Homepage and Profile are always accessible
+    const isLocked =
+      !isProfileComplete && !["homepage", "profile"].includes(tabName);
     const isActive = activeTab === tabName;
     return (
       <button
@@ -231,6 +237,7 @@ const SellerDashboard = () => {
 
       <div className="w-full md:w-64 flex-shrink-0">
         <div className="bg-white p-4 rounded-xl shadow-md space-y-2">
+          <TabButton tabName="homepage" icon={HomeIcon} label="Homepage" />
           <TabButton tabName="profile" icon={UserIcon} label="Profile" />
           <TabButton
             tabName="products"
