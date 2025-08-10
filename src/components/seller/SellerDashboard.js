@@ -1,16 +1,13 @@
-// src/components/seller/SellerDashboard.js
 import React, { useState, useEffect, useCallback } from "react";
 import { getSellerProfile } from "../../services/api";
 import LoadingSpinner from "../common/LoadingSpinner";
-import SellerHomepage from "./SellerHomepage"; // Import the new homepage component
+import SellerHomepage from "./SellerHomepage";
 import SellerProfile from "./SellerProfile";
 import SellerProducts from "./SellerProducts";
 import SellerOrders from "./SellerOrders";
 import SellerDeliveries from "./SellerDeliveries";
-import {
-  CreateFactoryForm,
-  CreateLocationForm,
-} from "./ProfileCompletionForms";
+import FactoryInfoForm from "./seller_registration/FactoryInfoForm";
+import LocationStep from "./seller_registration/LocationStep";
 
 // Icon Components
 const HomeIcon = (props) => (
@@ -97,13 +94,15 @@ const SellerDashboard = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("homepage"); // Default tab is now homepage
+  const [activeTab, setActiveTab] = useState("homepage");
   const [activeForm, setActiveForm] = useState(null);
   const [missingInfo, setMissingInfo] = useState({
     factory: false,
     factoryLocation: false,
     vendorLocation: false,
   });
+  const [sellerId, setSellerId] = useState(null);
+  const [factoryId, setFactoryId] = useState(null);
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -111,14 +110,19 @@ const SellerDashboard = () => {
     try {
       const data = await getSellerProfile();
       setProfile(data);
+      setSellerId(data.id);
 
       const hasFactories = data.factories && data.factories.length > 0;
       const hasFactoryLocation = hasFactories && data.factories[0]?.location;
       const hasVendorLocation = data.locations && data.locations.length > 0;
 
+      if (hasFactories) {
+        setFactoryId(data.factories[0].id);
+      }
+
       setMissingInfo({
         factory: !hasFactories,
-        factoryLocation: hasFactories && !hasFactoryLocation,
+        factoryLocation: !hasFactoryLocation,
         vendorLocation: !hasVendorLocation,
       });
     } catch (err) {
@@ -141,37 +145,71 @@ const SellerDashboard = () => {
   const isProfileComplete =
     !missingInfo.factory && !missingInfo.factoryLocation;
 
+  // --- MODIFICATION: Moved FormWrapper outside of renderActiveForm ---
+  const FormWrapper = ({ children, title }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+        <div className="relative p-6 border-b flex-shrink-0">
+          <h2 className="text-xl font-bold text-gray-800">{title}</h2>
+          <button
+            onClick={() => setActiveForm(null)}
+            className="absolute top-3.5 right-4 text-gray-400 hover:text-gray-600 p-2 rounded-full transition-colors"
+            aria-label="Close"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <div className="p-8 overflow-y-auto">{children}</div>
+        <div className="p-4 bg-gray-50 text-right rounded-b-xl border-t flex-shrink-0">
+          <button
+            onClick={() => setActiveForm(null)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderActiveForm = () => {
     if (!profile) return null;
+
     switch (activeForm) {
       case "ADD_FACTORY":
         return (
-          <CreateFactoryForm
-            onComplete={handleFormComplete}
-            onClose={() => setActiveForm(null)}
-          />
+          <FormWrapper title="Add Factory Information">
+            <FactoryInfoForm
+              sellerId={sellerId}
+              onComplete={handleFormComplete}
+            />
+          </FormWrapper>
         );
       case "ADD_FACTORY_LOCATION":
         return (
-          <CreateLocationForm
-            onComplete={handleFormComplete}
-            onClose={() => setActiveForm(null)}
-            factoryId={profile.factories[0].id}
-          />
-        );
-      case "ADD_VENDOR_LOCATION":
-        return (
-          <CreateLocationForm
-            onComplete={handleFormComplete}
-            onClose={() => setActiveForm(null)}
-            isVendorLocation={true}
-          />
+          <FormWrapper title="Set Your Factory's Location">
+            <LocationStep
+              factoryId={factoryId}
+              onComplete={handleFormComplete}
+            />
+          </FormWrapper>
         );
       default:
         return null;
     }
   };
-
 
   const renderContent = () => {
     if (!profile) return null;
@@ -187,7 +225,6 @@ const SellerDashboard = () => {
           />
         );
       case "products":
-        // MODIFIED: Pass the entire profile object instead of just products
         return (
           <SellerProducts profile={profile} onProductsUpdate={fetchProfile} />
         );
@@ -207,7 +244,6 @@ const SellerDashboard = () => {
     );
 
   const TabButton = ({ tabName, icon: Icon, label }) => {
-    // Homepage and Profile are always accessible
     const isLocked =
       !isProfileComplete && !["homepage", "profile"].includes(tabName);
     const isActive = activeTab === tabName;
@@ -232,7 +268,7 @@ const SellerDashboard = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full">
+    <div className="flex flex-col md:flex-row gap-6 h-full bg-gray-50 p-4">
       {renderActiveForm()}
 
       <div className="w-full md:w-64 flex-shrink-0">

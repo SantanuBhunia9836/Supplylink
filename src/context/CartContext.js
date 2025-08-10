@@ -1,64 +1,67 @@
-import React, { createContext, useState, useContext, useMemo } from "react";
+// src/context/CartContext.js
+import React, { createContext, useState, useContext, useEffect } from "react";
 
+// 1. Create the context
 export const CartContext = createContext();
 
-export const useCart = () => useContext(CartContext);
-
+// 2. Create the Provider component
 export const CartProvider = ({ children }) => {
+  // State to hold the items in the cart
   const [cartItems, setCartItems] = useState([]);
 
-  const addToCart = (product) => {
+  // Function to add an item to the cart
+  const addToCart = (productToAdd) => {
     setCartItems((prevItems) => {
-      const itemInCart = prevItems.find((item) => item.id === product.id);
-      if (itemInCart) {
+      const existingItem = prevItems.find(
+        (item) => item.id === productToAdd.id
+      );
+
+      // If item is already in cart, increase its quantity
+      if (existingItem) {
         return prevItems.map((item) =>
-          item.id === product.id
+          item.id === productToAdd.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-      return [...prevItems, { ...product, quantity: 1 }];
+
+      // Otherwise, add the new item with a quantity of 1
+      return [...prevItems, { ...productToAdd, quantity: 1 }];
     });
   };
 
+  // Function to remove an item from the cart
   const removeFromCart = (productId) => {
     setCartItems((prevItems) =>
       prevItems.filter((item) => item.id !== productId)
     );
   };
 
-  const updateQuantity = (productId, quantity) => {
-    setCartItems(
-      (prevItems) =>
-        prevItems
-          .map((item) =>
-            item.id === productId
-              ? { ...item, quantity: Math.max(0, quantity) }
-              : item
-          )
-          .filter((item) => item.quantity > 0) // Remove item if quantity is 0
-    );
+  // Function to clear the entire cart
+  const clearCart = () => {
+    setCartItems([]);
   };
 
-  const cartCount = useMemo(() => {
-    return cartItems.reduce((count, item) => count + item.quantity, 0);
-  }, [cartItems]);
+  // Calculate the total number of items in the cart
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
-  const totalPrice = useMemo(() => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
-  }, [cartItems]);
-
+  // The value that will be available to all consuming components
   const value = {
     cartItems,
     addToCart,
     removeFromCart,
-    updateQuantity,
+    clearCart,
     cartCount,
-    totalPrice,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+};
+
+// 3. Create a custom hook for easy access to the context
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (context === undefined) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
+  return context;
 };

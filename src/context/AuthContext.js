@@ -1,15 +1,14 @@
 // src/context/AuthContext.js
-import React, { useState, createContext, useCallback, useEffect } from "react";
+import React, { createContext, useState, useCallback, useEffect } from "react";
 import {
   apiLogin,
   apiLogout,
   getVendorProfile,
   getVendorStatus,
 } from "../services/api";
-// --- 1. IMPORT useLocation ---
-import { useLocation } from "./LocationContext";
+import { useLocation } from "./LocationContext"; // Ensure this path is correct
 
-// --- Full Screen Loader Component (No changes needed here) ---
+// --- FullScreenLoader (no changes) ---
 const FullScreenLoader = () => (
   <div className="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[9999]">
     <div className="text-white text-3xl font-bold mb-4">SupplyLink</div>
@@ -31,8 +30,7 @@ const FullScreenLoader = () => (
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  // --- 2. GET THE LOCATION FUNCTION AND DATA ---
-  const { location, getCurrentLocation } = useLocation();
+  const { location, getCurrentLocation } = useLocation(); // Get context data
 
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +58,6 @@ export const AuthProvider = ({ children }) => {
     setAuthLoading(true);
     try {
       const status = await getVendorStatus();
-
       if (status.is_login) {
         const profileData = await getVendorProfile();
         setUser({
@@ -85,9 +82,8 @@ export const AuthProvider = ({ children }) => {
     }
   }, [clearUserData]);
 
-  // --- 3. ADD THIS useEffect TO REQUEST LOCATION ON APP LOAD ---
+  // This useEffect triggers the location check on initial app load
   useEffect(() => {
-    // Only request location if it hasn't been fetched yet
     if (!location) {
       getCurrentLocation();
     }
@@ -96,6 +92,8 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     validateSession();
   }, [validateSession]);
+
+  // ... (login, logout functions remain the same)
 
   const login = async (credentials) => {
     setLoading(true);

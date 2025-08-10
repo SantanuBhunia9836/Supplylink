@@ -1,13 +1,11 @@
 // src/components/shop/SellerListing.js
 import React, { useState, useEffect, useCallback } from "react";
-// --- LocationContext now provides locationLoading and locationError ---
 import { useLocation } from "../../context/LocationContext";
 import { searchSellers } from "../../services/api";
 import FilterSection from "./FilterSection";
 import SellerCard from "./SellerCard";
 
 const SellerListing = () => {
-  // --- 1. GET THE FULL LOCATION STATE ---
   const { location, locationLoading, locationError } = useLocation();
   const [sellers, setSellers] = useState([]);
   const [searchInitiated, setSearchInitiated] = useState(false);
@@ -20,10 +18,8 @@ const SellerListing = () => {
     sortBy: "distance",
   });
 
-  // --- 2. REWORK THE SEARCH FUNCTION ---
-  // This function now depends only on location and filters.
   const searchSellersData = useCallback(async () => {
-    if (!location) return; // Guard clause
+    if (!location) return;
 
     setSearchLoading(true);
     setSearchError(null);
@@ -33,7 +29,19 @@ const SellerListing = () => {
         location.longitude,
         filters
       );
-      setSellers(sellersData);
+
+      // --- THIS IS THE FIX ---
+      // We prepare the data here to prevent crashes in the SellerCard component.
+      const preparedSellers = sellersData.map((seller) => ({
+        ...seller,
+        // 1. Rename 'distance_km' from the API to 'distance' which SellerCard expects.
+        // 2. If 'distance_km' is missing or not a number, set it to null so it doesn't crash.
+        distance:
+          typeof seller.distance_km === "number" ? seller.distance_km : null,
+      }));
+      // --- END OF FIX ---
+
+      setSellers(preparedSellers); // Use the cleaned and prepared data
     } catch (err) {
       setSearchError(
         err.message || "An error occurred while fetching sellers."
@@ -42,16 +50,13 @@ const SellerListing = () => {
     } finally {
       setSearchLoading(false);
     }
-  }, [location, filters]); // Dependencies for the search
+  }, [location, filters]);
 
-  // --- 3. UPDATE useEffect TO TRIGGER SEARCH ---
-  // This effect runs whenever the location or filters change.
   useEffect(() => {
     if (location && !searchInitiated) {
       searchSellersData();
-      setSearchInitiated(true); // Ensure initial search runs only once
+      setSearchInitiated(true);
     } else if (searchInitiated) {
-      // This part handles re-searching when filters are changed
       searchSellersData();
     }
   }, [location, filters, searchSellersData, searchInitiated]);
@@ -60,7 +65,6 @@ const SellerListing = () => {
     setFilters(newFilters);
   };
 
-  // Skeleton loader remains the same
   const renderSkeletons = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {[...Array(6)].map((_, index) => (
@@ -84,14 +88,12 @@ const SellerListing = () => {
   );
 
   return (
-    // We no longer need the ref and intersection observer
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             Find Your Nearby Sellers
           </h1>
-          {/* --- 4. IMPROVE UI MESSAGES BASED ON LOCATION STATE --- */}
           {locationLoading && (
             <p className="text-gray-500 text-lg">Getting your location...</p>
           )}
@@ -117,7 +119,6 @@ const SellerListing = () => {
           </div>
 
           <div className="lg:col-span-3">
-            {/* --- 5. RENDER BASED ON SEARCH STATE --- */}
             {searchLoading ? (
               renderSkeletons()
             ) : searchError ? (
@@ -130,7 +131,6 @@ const SellerListing = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {/* --- FIX: Using seller.seller_id as the unique key --- */}
                 {sellers.map((seller) => (
                   <SellerCard key={seller.seller_id} seller={seller} />
                 ))}

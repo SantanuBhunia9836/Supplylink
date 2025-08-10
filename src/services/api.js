@@ -286,12 +286,14 @@ export const apiCreateVendorLocation = async (locationData) => {
 
 // --- SELLER APIS ---
 
+// src/services/api.js
+
 export const searchSellers = async (latitude, longitude, filters = {}) => {
   const endpoint = `${API_BASE_URL}/seller/search`;
   try {
     const payload = {
       latitude: latitude,
-      longtitude: longitude,
+      longtitude: longitude, // Reverted to the typo to match the backend API
     };
 
     const response = await fetch(endpoint, {
@@ -318,7 +320,47 @@ export const searchSellers = async (latitude, longitude, filters = {}) => {
     const responseData = JSON.parse(responseText);
     return responseData;
   } catch (error) {
+    // Log the original error for debugging purposes
     console.error("🚨 Seller search failed:", error);
+
+    // --- MODIFICATION START ---
+    // Check if the error is a TypeError, which usually indicates a network failure
+    // (e.g., server is offline, DNS issue, or waking from sleep).
+    if (error instanceof TypeError) {
+      // Throw a new, more user-friendly error. The UI will display this message.
+      throw new Error(
+        "Server is waking up. Please refresh the page in a moment."
+      );
+    }
+    // --- MODIFICATION END ---
+
+    // For any other kind of error, re-throw it as is.
+    throw error;
+  }
+};
+
+// src/services/api.js
+
+// ... (keep all your other functions)
+
+// NEW FUNCTION to fetch all data for the seller detail page
+export const getSellerPageDetails = async (factoryId) => {
+  const endpoint = `${API_BASE_URL}/seller/seller-detail/${factoryId}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to fetch seller page details:", error);
+    if (error instanceof TypeError) {
+      throw new Error("Server is waking up. Please refresh the page in a moment.");
+    }
     throw error;
   }
 };
