@@ -13,6 +13,9 @@ import { LocationProvider } from "./context/LocationContext";
 import { CartProvider } from "./context/CartContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 // --- Layout & Component Imports ---
 import LandingPageHeader from "./components/layout/LandingPageHeader";
 import LandingPageFooter from "./components/layout/LandingPageFooter";
@@ -28,15 +31,10 @@ import Dashboard from "./pages/Dashboard";
 import SellerDetailPage from "./pages/SellerDetailPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import CartPage from "./pages/CartPage";
-// --- FIX: Import the SellerRegistration page ---
 import SellerRegistration from "./pages/SellerRegistration";
 
-/**
- * This layout component wraps all public-facing pages.
- */
-const WebsiteLayout = () => {
+const WebsiteLayout = ({ onLocationClick }) => {
   const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
-  const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(false);
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
@@ -45,13 +43,12 @@ const WebsiteLayout = () => {
       <LandingPageHeader
         onLoginClick={() => setIsLoginPopupOpen(true)}
         onSignupClick={() => navigate("/register")}
-        onLocationClick={() => setIsLocationPanelOpen(true)}
+        onLocationClick={onLocationClick}
       />
       <main className="flex-grow">
         <Outlet />
       </main>
       <LandingPageFooter />
-      {/* Popups are controlled by the layout */}
       <LoginPopup
         isOpen={isLoginPopupOpen}
         onClose={() => setIsLoginPopupOpen(false)}
@@ -66,10 +63,29 @@ function AppContent() {
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(false);
 
   return (
-    <Router>
+    // --- FIX: Added all required 'future' flags to opt-in to v7 behaviors ---
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <ToastContainer
+        position="top-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="flex flex-col min-h-screen pb-16 md:pb-0">
         <Routes>
-          <Route element={<WebsiteLayout />}>
+          <Route
+            element={
+              <WebsiteLayout
+                onLocationClick={() => setIsLocationPanelOpen(true)}
+              />
+            }
+          >
             <Route path="/" element={<LandingPage />} />
             <Route path="/seller/:id" element={<SellerDetailPage />} />
             <Route path="/product/:id" element={<ProductDetailPage />} />
@@ -84,13 +100,10 @@ function AppContent() {
             path="/register"
             element={!user ? <RegisterPage /> : <Navigate to="/dashboard" />}
           />
-
-          {/* --- FIX: Add the route for Seller Registration --- */}
           <Route
             path="/seller-registration"
             element={user ? <SellerRegistration /> : <Navigate to="/login" />}
           />
-
           <Route
             path="/dashboard/*"
             element={user ? <Dashboard /> : <Navigate to="/login" />}
@@ -105,7 +118,9 @@ function AppContent() {
       <LocationPanel
         isOpen={isLocationPanelOpen}
         onClose={() => setIsLocationPanelOpen(false)}
-        onSuccess={() => setIsLocationPanelOpen(false)}
+        onSuccess={() => {
+          setIsLocationPanelOpen(false);
+        }}
       />
     </Router>
   );

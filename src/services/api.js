@@ -86,7 +86,6 @@ export const apiVendorRegister = async (registrationData) => {
     password: String(registrationData.password),
   };
 
-  // Handle phone number logic for Google Sign-In
   if (registrationData.phone) {
     payload.phone = String(registrationData.phone);
   } else if (registrationData.password.startsWith("google_sub_")) {
@@ -100,8 +99,6 @@ export const apiVendorRegister = async (registrationData) => {
       body: JSON.stringify(payload),
     });
 
-    // For Google sign-in, we accept a 422/400 error if the user already exists.
-    // The subsequent login call will handle authentication.
     if (!response.ok && ![422, 400].includes(response.status)) {
       const responseData = await response.json();
       let errorMessage = "Registration failed";
@@ -123,7 +120,6 @@ export const apiVendorRegister = async (registrationData) => {
     if (error.name === "TypeError") {
       throw new Error("Network error. Please check your connection.");
     }
-    // Don't re-throw for existing user errors during Google sign-up
     if (error.message.includes("already exists")) {
       return;
     }
@@ -137,7 +133,7 @@ export const getVendorStatus = async () => {
     const response = await fetch(endpoint, {
       method: "GET",
       headers: { Accept: "application/json" },
-      credentials: "include", // This sends the session cookie
+      credentials: "include",
     });
     if (response.ok) {
       return await response.json();
@@ -172,7 +168,7 @@ export const apiLogin = async ({ username, password, role }) => {
         Accept: "application/json",
       },
       body: formData,
-      credentials: "include", // Important for the backend to be able to set the cookie
+      credentials: "include",
     });
     const responseData = await response.json();
     return handleApiError(response, responseData);
@@ -183,7 +179,6 @@ export const apiLogin = async ({ username, password, role }) => {
 };
 
 export const apiGoogleLogin = async (authCode) => {
-  // The new endpoint for handling Google OAuth
   const endpoint = `${API_BASE_URL}/vendor/oauth/login`;
   try {
     const response = await fetch(endpoint, {
@@ -192,12 +187,10 @@ export const apiGoogleLogin = async (authCode) => {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      // The backend expects an object with the authorization code from Google
       body: JSON.stringify({ code: authCode }),
-      credentials: "include", // Important for the backend to set the session cookie
+      credentials: "include",
     });
     const responseData = await response.json();
-    // Use the existing error handler
     return handleApiError(response, responseData);
   } catch (error) {
     console.error("🚨 Google login failed:", error);
@@ -213,7 +206,7 @@ export const apiLogout = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // Sends the cookie to be cleared
+      credentials: "include",
     });
     return "Logout successful";
   } catch (error) {
@@ -221,7 +214,6 @@ export const apiLogout = async () => {
       "🚨 Logout failed but proceeding with frontend state clearing.",
       error
     );
-    // We don't re-throw the error, allowing frontend logout to complete regardless.
   }
 };
 
@@ -233,7 +225,7 @@ export const getVendorProfile = async () => {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // Sends the session cookie for authentication
+      credentials: "include",
     });
     const responseData = await response.json();
     return handleApiError(response, responseData);
@@ -242,16 +234,15 @@ export const getVendorProfile = async () => {
   }
 };
 
-// --- NEW FUNCTION TO GET SELLER-SPECIFIC PROFILE ---
 export const getSellerProfile = async () => {
-  const endpoint = `${API_BASE_URL}/seller/profile`;
+  const endpoint = `${API_BASE_URL}/seller/profile/`;
   try {
     const response = await fetch(endpoint, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // Sends the session cookie for authentication
+      credentials: "include",
     });
     const responseData = await response.json();
     return handleApiError(response, responseData);
@@ -260,7 +251,6 @@ export const getSellerProfile = async () => {
   }
 };
 
-// --- VENDOR LOCATION API ---
 export const apiCreateVendorLocation = async (locationData) => {
   const endpoint = `${API_BASE_URL}/vendor/location/create/`;
   const payload = {
@@ -286,14 +276,13 @@ export const apiCreateVendorLocation = async (locationData) => {
 
 // --- SELLER APIS ---
 
-// src/services/api.js
-
+// --- FIX: Added robust error handling for cold starts ---
 export const searchSellers = async (latitude, longitude, filters = {}) => {
   const endpoint = `${API_BASE_URL}/seller/search`;
   try {
     const payload = {
       latitude: latitude,
-      longtitude: longitude, // Reverted to the typo to match the backend API
+      longtitude: longitude, // Note: backend expects 'longtitude' typo
     };
 
     const response = await fetch(endpoint, {
@@ -305,45 +294,28 @@ export const searchSellers = async (latitude, longitude, filters = {}) => {
       body: JSON.stringify(payload),
     });
 
-    const responseText = await response.text();
-
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch (e) {
-        errorData = responseText;
-      }
+      const errorData = await response
+        .json()
+        .catch(() => ({ detail: "The server returned an invalid response." }));
       return handleApiError(response, errorData);
     }
 
-    const responseData = JSON.parse(responseText);
-    return responseData;
+    return await response.json();
   } catch (error) {
-    // Log the original error for debugging purposes
     console.error("🚨 Seller search failed:", error);
-
-    // --- MODIFICATION START ---
-    // Check if the error is a TypeError, which usually indicates a network failure
-    // (e.g., server is offline, DNS issue, or waking from sleep).
+    // --- THIS IS THE FIX ---
+    // A TypeError often indicates a network failure, such as the server being offline or waking up.
     if (error instanceof TypeError) {
-      // Throw a new, more user-friendly error. The UI will display this message.
       throw new Error(
-        "Server is waking up. Please refresh the page in a moment."
+        "Our server is waking up. Please refresh the page in a moment."
       );
     }
-    // --- MODIFICATION END ---
-
     // For any other kind of error, re-throw it as is.
     throw error;
   }
 };
 
-// src/services/api.js
-
-// ... (keep all your other functions)
-
-// NEW FUNCTION to fetch all data for the seller detail page
 export const getSellerPageDetails = async (factoryId) => {
   const endpoint = `${API_BASE_URL}/seller/seller-detail/${factoryId}`;
   try {
@@ -359,7 +331,9 @@ export const getSellerPageDetails = async (factoryId) => {
   } catch (error) {
     console.error("🚨 Failed to fetch seller page details:", error);
     if (error instanceof TypeError) {
-      throw new Error("Server is waking up. Please refresh the page in a moment.");
+      throw new Error(
+        "Server is waking up. Please refresh the page in a moment."
+      );
     }
     throw error;
   }
@@ -401,7 +375,6 @@ export const getSellerProductsList = async (sellerId) => {
   }
 };
 
-// --- NEWLY ADDED FUNCTIONS TO FIX ERRORS ---
 export const getSellerProducts = async (sellerId, factoryId) => {
   const endpoint = `${API_BASE_URL}/seller/products?seller_id=${sellerId}&factory_id=${factoryId}`;
   try {
@@ -437,7 +410,6 @@ export const getProductDetails = async (productId) => {
     throw error;
   }
 };
-// --- END OF NEWLY ADDED FUNCTIONS ---
 
 export const apiCreateSeller = async (sellerData) => {
   const endpoint = `${API_BASE_URL}/seller/create/`;

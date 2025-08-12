@@ -28,9 +28,8 @@ export const LocationProvider = ({ children }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
 
-  // Use useCallback to prevent this function from being recreated on every render
+  // Fetches location using the browser's geolocation API
   const getCurrentLocation = useCallback(() => {
-    // Prevent multiple requests if one is already in progress
     if (locationLoading) return;
 
     setLocationLoading(true);
@@ -68,15 +67,34 @@ export const LocationProvider = ({ children }) => {
     navigator.geolocation.getCurrentPosition(onSuccess, onError, {
       enableHighAccuracy: true,
       timeout: 15000,
-      maximumAge: 0, // Force a fresh location check
+      maximumAge: 0,
     });
-  }, [locationLoading]); // Dependency ensures function is stable
+  }, [locationLoading]);
+
+  // --- NEW FUNCTION ---
+  // Manually updates the location in the context based on form data.
+  // This will trigger any component using the `location` state to update.
+  const updateLocation = useCallback(async (newLocationData) => {
+    setLocationLoading(true);
+    const city = await getCityFromCoords(
+      newLocationData.latitude,
+      newLocationData.longitude
+    );
+    setLocation({
+      latitude: newLocationData.latitude,
+      longitude: newLocationData.longitude,
+      city: city,
+    });
+    setLocationLoading(false);
+  }, []);
 
   const value = {
     location,
     locationLoading,
     locationError,
     getCurrentLocation,
+    // --- FIX: Expose the new function through the context ---
+    updateLocation,
   };
 
   return (

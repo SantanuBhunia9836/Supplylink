@@ -1,67 +1,88 @@
 // src/context/CartContext.js
-import React, { createContext, useState, useContext, useEffect } from "react";
 
-// 1. Create the context
+import React, { createContext, useState, useEffect } from "react";
+
 export const CartContext = createContext();
 
-// 2. Create the Provider component
 export const CartProvider = ({ children }) => {
-  // State to hold the items in the cart
-  const [cartItems, setCartItems] = useState([]);
+  const [cartItems, setCartItems] = useState(() => {
+    // Load cart from localStorage on initial render
+    try {
+      const localData = localStorage.getItem("cart");
+      return localData ? JSON.parse(localData) : [];
+    } catch (error) {
+      console.error("Failed to parse cart data from localStorage", error);
+      return [];
+    }
+  });
 
-  // Function to add an item to the cart
-  const addToCart = (productToAdd) => {
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("cart", JSON.stringify(cartItems));
+    } catch (error) {
+      console.error("Failed to save cart data to localStorage", error);
+    }
+  }, [cartItems]);
+
+  const addToCart = (product) => {
     setCartItems((prevItems) => {
-      const existingItem = prevItems.find(
-        (item) => item.id === productToAdd.id
-      );
-
-      // If item is already in cart, increase its quantity
-      if (existingItem) {
+      const itemInCart = prevItems.find((item) => item.id === product.id);
+      if (itemInCart) {
+        // If item is already in cart, increase quantity by 1
         return prevItems.map((item) =>
-          item.id === productToAdd.id
+          item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
-
-      // Otherwise, add the new item with a quantity of 1
-      return [...prevItems, { ...productToAdd, quantity: 1 }];
+      // Otherwise, add new item with quantity of 1
+      return [...prevItems, { ...product, quantity: 1 }];
     });
   };
 
-  // Function to remove an item from the cart
   const removeFromCart = (productId) => {
     setCartItems((prevItems) =>
       prevItems.filter((item) => item.id !== productId)
     );
   };
 
-  // Function to clear the entire cart
-  const clearCart = () => {
-    setCartItems([]);
+  // --- 1. THE MISSING FUNCTION DEFINITION ---
+  // This function allows changing the quantity of an item in the cart.
+  const updateQuantity = (productId, newQuantity) => {
+    // Ensure newQuantity is a valid number and at least 1
+    const quantity = Math.max(1, Number(newQuantity));
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item.id === productId ? { ...item, quantity: quantity } : item
+      )
+    );
   };
 
-  // Calculate the total number of items in the cart
-  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  // Calculate total price and item count
+  const totalPrice = cartItems.reduce((total, item) => {
+    const price = Number(item.price) || 0;
+    const quantity = Number(item.quantity) || 0;
+    return total + price * quantity;
+  }, 0);
 
-  // The value that will be available to all consuming components
-  const value = {
+  const cartCount = cartItems.reduce(
+    (count, item) => count + (Number(item.quantity) || 0),
+    0
+  );
+
+  // --- 2. THE FIX IS HERE ---
+  // Ensure `updateQuantity` is included in the value passed to the provider.
+  const contextValue = {
     cartItems,
     addToCart,
     removeFromCart,
-    clearCart,
+    updateQuantity, // This makes the function available to all consumer components
+    totalPrice,
     cartCount,
   };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
-
-// 3. Create a custom hook for easy access to the context
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (context === undefined) {
-    throw new Error("useCart must be used within a CartProvider");
-  }
-  return context;
+  return (
+    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
+  );
 };

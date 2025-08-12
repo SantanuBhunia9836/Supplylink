@@ -2,7 +2,9 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
-// --- Reusable Icon Components ---
+/**
+ * Icon component for the category tag.
+ */
 const TagIcon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -21,32 +23,54 @@ const TagIcon = (props) => (
   </svg>
 );
 
+/**
+ * A card component to display summary information about a seller.
+ * It handles navigation to the seller's detail page and gracefully displays
+ * data even if some fields are missing from the API response.
+ *
+ * @param {object} props - The component props.
+ * @param {object} props.seller - The seller data object from the API.
+ */
 const SellerCard = ({ seller }) => {
   const navigate = useNavigate();
 
-  // This function now passes the entire seller object in the navigation state
-  // This avoids having to re-fetch data that we already have on the next page
+  // If seller data is not provided, render a placeholder or null to prevent crashes.
+  if (!seller || !seller.factory_id) {
+    // You can also return a skeleton loader here for a better UX
+    return null;
+  }
+
+  /**
+   * Navigates to the detailed page for the seller.
+   * Uses `factory_id` as it's the unique identifier from the search results.
+   */
   const handleViewDetails = () => {
-    navigate(`/seller/${seller.seller_id}`, { state: { seller } });
+    navigate(`/seller/${seller.factory_id}`, { state: { seller } });
   };
 
-  // Safely access data, providing sensible fallbacks if it's missing from the API response
+  // Safely access nested properties with fallbacks to prevent errors.
   const businessName = seller.factory_name || "Unnamed Business";
   const businessType = seller.factory_type || "Seller";
   const city = seller.factory_location?.city || "Unknown";
   const state = seller.factory_location?.state || "Location";
   const rating = seller.rating || "N/A";
   const category = seller.category || "General Supplies";
-  const distanceInKm = seller.distance;
+  const distanceInKm = seller.distance; // This is now a number from SellerListing.js
 
+  /**
+   * Formats the distance in kilometers to a human-readable string.
+   * Displays in meters if less than 1 km.
+   * @param {number|null|undefined} km - The distance in kilometers.
+   * @returns {string} The formatted distance string.
+   */
   const formatDistance = (km) => {
     if (typeof km !== "number") {
-      return null;
+      return "Distance not available";
     }
     if (km < 1) {
-      return `${Math.round(km * 1000)} m`;
+      return `${Math.round(km * 1000)} m away`;
     }
-    return `${km.toFixed(1)} km`;
+    return `${km.toFixed(1)} km away`;
   };
 
   const displayDistance = formatDistance(distanceInKm);
@@ -90,7 +114,7 @@ const SellerCard = ({ seller }) => {
           </div>
         </div>
 
-        <div className="space-y-2 mb-4">
+        <div className="space-y-3 mb-4">
           <div className="flex items-center text-sm text-gray-600">
             <svg
               className="w-4 h-4 mr-2"
@@ -102,7 +126,7 @@ const SellerCard = ({ seller }) => {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 111.314 0z"
+                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
               />
               <path
                 strokeLinecap="round"
@@ -116,24 +140,22 @@ const SellerCard = ({ seller }) => {
             </span>
           </div>
 
-          {displayDistance && (
-            <div className="flex items-center text-sm text-gray-600">
-              <svg
-                className="w-4 h-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <span>{displayDistance} away</span>
-            </div>
-          )}
+          <div className="flex items-center text-sm text-gray-600">
+            <svg
+              className="w-4 h-4 mr-2"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span>{displayDistance}</span>
+          </div>
 
           <div className="flex items-center text-sm text-gray-600">
             <TagIcon className="w-4 h-4 mr-2" />
@@ -141,7 +163,6 @@ const SellerCard = ({ seller }) => {
           </div>
         </div>
 
-        {/* This button now triggers the navigation with state */}
         <button
           onClick={handleViewDetails}
           className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"

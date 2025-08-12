@@ -185,16 +185,27 @@ const RegisterPage = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  // --- FIX: Updated handleSubmit to correctly handle API responses ---
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (validateForm()) {
       setIsSubmitting(true);
       setErrors({});
       try {
-        await apiVendorRegister(formData);
+        // 1. Await the API call and store its result.
+        const result = await apiVendorRegister(formData);
+
+        // 2. Check if the result contains a 'detail' property, which our backend uses for errors.
+        if (result && result.detail) {
+          // If it does, it's an error. Throw it so the catch block can handle it.
+          throw new Error(result.detail);
+        }
+
+        // 3. If no 'detail' property exists, the registration was successful.
         toast.success("Registration complete! You can now log in.");
         navigate("/login");
       } catch (error) {
+        // 4. The catch block now receives the correct error message from the backend.
         console.error("Registration error:", error);
         toast.error(error.message || "An unexpected error occurred.");
         setErrors({ form: error.message });
@@ -275,7 +286,7 @@ const RegisterPage = () => {
             >
               {isSubmitting ? <LoadingSpinner /> : "Create Vendor Account"}
             </button>
-            
+
             {/* Render the GoogleLogin component here */}
             <GoogleLogin />
           </form>

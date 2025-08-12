@@ -3,6 +3,7 @@ import React, { useState, useContext, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import { CartContext } from "../../context/CartContext";
+import { useLocation as useLocationContext } from "../../context/LocationContext";
 import ProfileCompletionIndicator from "../common/ProfileCompletionIndicator";
 
 const CartIcon = ({ cartCount }) => {
@@ -38,14 +39,13 @@ const CartIcon = ({ cartCount }) => {
 };
 
 const AccountDropdown = ({
-  isOpen,
   user,
   profileName,
-  onClose,
   onDashboard,
   onLogout,
   onBecomeSeller,
   onLocation,
+  isOpen,
 }) => {
   if (!isOpen) return null;
 
@@ -55,7 +55,6 @@ const AccountDropdown = ({
         <p className="text-sm text-gray-500">Signed in as</p>
         <p className="font-semibold text-gray-800 truncate">{profileName}</p>
       </div>
-
       <button
         onClick={onDashboard}
         className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
@@ -75,7 +74,6 @@ const AccountDropdown = ({
         </svg>
         Dashboard
       </button>
-
       {user?.is_seller ? (
         <button
           onClick={onDashboard}
@@ -117,7 +115,6 @@ const AccountDropdown = ({
           Become a Seller
         </button>
       )}
-
       <button
         onClick={onLocation}
         className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"

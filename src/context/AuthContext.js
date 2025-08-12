@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const validateSession = useCallback(async () => {
-    setAuthLoading(true);
+    // No need to set authLoading here, it's handled by the effect's start
     try {
       const status = await getVendorStatus();
       if (status.is_login) {
@@ -78,6 +78,7 @@ export const AuthProvider = ({ children }) => {
       console.error("Session validation failed", err);
       clearUserData();
     } finally {
+      // The loading state is managed in the useEffect hook now
       setAuthLoading(false);
     }
   }, [clearUserData]);
@@ -89,11 +90,20 @@ export const AuthProvider = ({ children }) => {
     }
   }, [location, getCurrentLocation]);
 
+  /**
+   * This `useEffect` hook triggers the session validation with a debounce.
+   * This prevents the double-call issue caused by React's Strict Mode.
+   */
   useEffect(() => {
-    validateSession();
-  }, [validateSession]);
+    const handler = setTimeout(() => {
+      validateSession();
+    }, 300); // 300ms delay
 
-  // ... (login, logout functions remain the same)
+    // Cleanup function to cancel the timer on re-render
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [validateSession]);
 
   const login = async (credentials) => {
     setLoading(true);

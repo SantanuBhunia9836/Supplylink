@@ -8,87 +8,7 @@ import SellerOrders from "./SellerOrders";
 import SellerDeliveries from "./SellerDeliveries";
 import FactoryInfoForm from "./seller_registration/FactoryInfoForm";
 import LocationStep from "./seller_registration/LocationStep";
-
-// Icon Components
-const HomeIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    {...props}
-  >
-    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-  </svg>
-);
-const UserIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    {...props}
-  >
-    <path d="M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 12c-3.31 0-6 2.69-6 6v1h12v-1c0-3.31-2.69-6-6-6z" />
-  </svg>
-);
-const PackageIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-  </svg>
-);
-const TruckIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <rect x="1" y="3" width="15" height="13"></rect>
-    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-    <circle cx="5.5" cy="18.5" r="2.5"></circle>
-    <circle cx="18.5" cy="18.5" r="2.5"></circle>
-  </svg>
-);
-const ShoppingBagIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <path d="M16 10a4 4 0 0 1-8 0"></path>
-  </svg>
-);
-const LockIcon = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    {...props}
-  >
-    <path d="M12 2C9.24 2 7 4.24 7 7v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7c0-2.76-2.24-5-5-5zm0 2c1.66 0 3 1.34 3 3v3H9V7c0-1.66 1.34-3 3-3z"></path>
-  </svg>
-);
+import { Home, User, Package, ShoppingBag, Truck, Lock } from "lucide-react";
 
 const SellerDashboard = () => {
   const [profile, setProfile] = useState(null);
@@ -99,7 +19,6 @@ const SellerDashboard = () => {
   const [missingInfo, setMissingInfo] = useState({
     factory: false,
     factoryLocation: false,
-    vendorLocation: false,
   });
   const [sellerId, setSellerId] = useState(null);
   const [factoryId, setFactoryId] = useState(null);
@@ -114,7 +33,6 @@ const SellerDashboard = () => {
 
       const hasFactories = data.factories && data.factories.length > 0;
       const hasFactoryLocation = hasFactories && data.factories[0]?.location;
-      const hasVendorLocation = data.locations && data.locations.length > 0;
 
       if (hasFactories) {
         setFactoryId(data.factories[0].id);
@@ -123,7 +41,6 @@ const SellerDashboard = () => {
       setMissingInfo({
         factory: !hasFactories,
         factoryLocation: !hasFactoryLocation,
-        vendorLocation: !hasVendorLocation,
       });
     } catch (err) {
       setError("Failed to fetch your profile. Please try again later.");
@@ -145,7 +62,16 @@ const SellerDashboard = () => {
   const isProfileComplete =
     !missingInfo.factory && !missingInfo.factoryLocation;
 
-  // --- MODIFICATION: Moved FormWrapper outside of renderActiveForm ---
+  const tabs = [
+    { id: "homepage", label: "Home", icon: Home },
+    { id: "profile", label: "Profile", icon: User },
+    { id: "products", label: "Products", icon: Package },
+    { id: "orders", label: "Orders", icon: ShoppingBag },
+    { id: "deliveries", label: "Deliveries", icon: Truck },
+  ];
+
+  const activeTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
+
   const FormWrapper = ({ children, title }) => (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
@@ -172,21 +98,12 @@ const SellerDashboard = () => {
           </button>
         </div>
         <div className="p-8 overflow-y-auto">{children}</div>
-        <div className="p-4 bg-gray-50 text-right rounded-b-xl border-t flex-shrink-0">
-          <button
-            onClick={() => setActiveForm(null)}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border rounded-md hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        </div>
       </div>
     </div>
   );
 
   const renderActiveForm = () => {
     if (!profile) return null;
-
     switch (activeForm) {
       case "ADD_FACTORY":
         return (
@@ -243,7 +160,7 @@ const SellerDashboard = () => {
       <div className="text-center text-red-500 font-semibold p-10">{error}</div>
     );
 
-  const TabButton = ({ tabName, icon: Icon, label }) => {
+  const DesktopTabButton = ({ tabName, icon: Icon, label }) => {
     const isLocked =
       !isProfileComplete && !["homepage", "profile"].includes(tabName);
     const isActive = activeTab === tabName;
@@ -257,35 +174,77 @@ const SellerDashboard = () => {
             : "text-gray-600 hover:bg-gray-200"
         } ${isLocked ? "cursor-not-allowed opacity-60" : ""}`}
       >
-        {isLocked ? (
-          <LockIcon className="w-5 h-5" />
-        ) : (
-          <Icon className="w-5 h-5" />
-        )}
+        {isLocked ? <Lock className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
         <span className="font-medium">{label}</span>
       </button>
     );
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 h-full bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50">
       {renderActiveForm()}
 
-      <div className="w-full md:w-64 flex-shrink-0">
-        <div className="bg-white p-4 rounded-xl shadow-md space-y-2">
-          <TabButton tabName="homepage" icon={HomeIcon} label="Homepage" />
-          <TabButton tabName="profile" icon={UserIcon} label="Profile" />
-          <TabButton
-            tabName="products"
-            icon={PackageIcon}
-            label="My Products"
-          />
-          <TabButton tabName="orders" icon={ShoppingBagIcon} label="Orders" />
-          <TabButton tabName="deliveries" icon={TruckIcon} label="Deliveries" />
+      <div className="flex flex-col md:flex-row md:gap-6 h-full md:p-4">
+        {/* Desktop Header */}
+        <div className="hidden md:block w-64 flex-shrink-0">
+          <div className="bg-white p-4 rounded-xl shadow-md space-y-2">
+            <div className="text-2xl font-bold text-gray-800 p-3">
+              Dashboard
+            </div>
+            {tabs.map((tab) => (
+              <DesktopTabButton
+                key={tab.id}
+                tabName={tab.id}
+                icon={tab.icon}
+                label={tab.label}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-grow md:bg-white md:p-6 md:rounded-xl md:shadow-md md:overflow-y-auto">
+          <div className="p-4 md:p-0 pb-20 md:pb-0">{renderContent()}</div>
         </div>
       </div>
-      <div className="flex-grow bg-white p-6 rounded-xl shadow-md overflow-y-auto">
-        {renderContent()}
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white shadow-lg z-40 border-t border-gray-200">
+        <div className="relative">
+          <div className="flex">
+            {tabs.map((tab) => {
+              const isLocked =
+                !isProfileComplete && !["homepage", "profile"].includes(tab.id);
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => !isLocked && setActiveTab(tab.id)}
+                  disabled={isLocked}
+                  className={`flex-1 py-3 px-1 text-center text-xs font-medium transition-colors duration-300 flex flex-col items-center gap-1 ${
+                    activeTab === tab.id ? "text-blue-600" : "text-gray-500"
+                  } ${
+                    isLocked
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {isLocked ? (
+                    <Lock className="w-5 h-5" />
+                  ) : (
+                    <tab.icon className="w-5 h-5" />
+                  )}
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+          <div
+            className="absolute top-0 h-1 bg-blue-600 rounded-full transition-all duration-300 ease-in-out"
+            style={{
+              width: `${100 / tabs.length}%`,
+              transform: `translateX(${activeTabIndex * 100}%)`,
+            }}
+          ></div>
+        </div>
       </div>
     </div>
   );
