@@ -67,14 +67,13 @@ const handleApiError = (response, responseData) => {
       errorMessage = `Authentication Error: ${errorMessage}`;
     } else if (response.status === 404) {
       errorMessage = `Not Found: ${errorMessage}`;
-    } else {
-      errorMessage = `Error (${response.status}): ${errorMessage}`;
+   }  else {
+        errorMessage = `Error (${response.status}): ${errorMessage}`;
+      }
+      throw new Error(errorMessage);
     }
-
-    throw new Error(errorMessage);
-  }
-  return responseData;
-};
+    return responseData;
+  };
 
 // --- AUTHENTICATION APIS ---
 export const apiVendorRegister = async (registrationData) => {
@@ -274,15 +273,12 @@ export const apiCreateVendorLocation = async (locationData) => {
   }
 };
 
-// --- SELLER APIS ---
-
-// --- FIX: Added robust error handling for cold starts ---
 export const searchSellers = async (latitude, longitude, filters = {}) => {
   const endpoint = `${API_BASE_URL}/seller/search`;
   try {
     const payload = {
       latitude: latitude,
-      longtitude: longitude, // Note: backend expects 'longtitude' typo
+      longtitude: longitude,
     };
 
     const response = await fetch(endpoint, {
@@ -304,17 +300,17 @@ export const searchSellers = async (latitude, longitude, filters = {}) => {
     return await response.json();
   } catch (error) {
     console.error("🚨 Seller search failed:", error);
-    // --- THIS IS THE FIX ---
-    // A TypeError often indicates a network failure, such as the server being offline or waking up.
     if (error instanceof TypeError) {
       throw new Error(
         "Our server is waking up. Please refresh the page in a moment."
       );
     }
-    // For any other kind of error, re-throw it as is.
-    throw error;
+    throw new Error(
+      error.message || "Oops! Something went wrong on our end. Please try again later."
+    );
   }
 };
+
 
 export const getSellerPageDetails = async (factoryId) => {
   const endpoint = `${API_BASE_URL}/seller/seller-detail/${factoryId}`;

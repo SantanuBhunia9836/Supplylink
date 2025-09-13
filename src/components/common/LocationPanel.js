@@ -10,11 +10,12 @@ import {
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 // --- FIX: Import API functions that will be used ---
+// ... existing code ...
 import { apiCreateVendorLocation, getVendorProfile } from "../../services/api";
 // --- FIX: Import contexts to get user and location data ---
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext } from "../../features/auth/AuthContext"; // Corrected path
 import { LocationContext } from "../../context/LocationContext";
-
+// ... existing code ...
 // --- LEAFLET ICON FIX ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({

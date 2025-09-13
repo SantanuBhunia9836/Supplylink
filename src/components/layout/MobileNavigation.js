@@ -1,8 +1,10 @@
 // src/components/layout/MobileNavigation.js
 import React, { useContext, useState, useEffect } from "react";
+// ... existing code ...
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext } from "../../features/auth/AuthContext"; // Corrected path
 import ProfileCompletionIndicator from "../common/ProfileCompletionIndicator";
+// ... existing code ...
 
 // --- Icon Components (Added LoginIcon) ---
 const HomeIcon = (props) => (
@@ -128,13 +130,13 @@ const LoginIcon = (props) => (
     <line x1="15" y1="12" x2="3" y2="12" />
   </svg>
 );
-
 const AccountMenu = ({
   user,
   profileName,
   onClose,
   onLogout,
   onLocationClick,
+  onBecomeSellerClick, // New prop
 }) => {
   // This component remains unchanged
   return (
@@ -161,6 +163,15 @@ const AccountMenu = ({
           </button>
         </div>
         <div className="space-y-2">
+          {user && !user.is_seller && ( // Conditionally render "Become a Seller"
+            <button
+              onClick={onBecomeSellerClick}
+              className="w-full flex items-center space-x-3 text-lg p-3 text-gray-700 hover:bg-gray-100 rounded-lg"
+            >
+              <UserIcon className="w-6 h-6" /> {/* Reusing UserIcon for "Become a Seller" */}
+              <span>Become a Seller</span>
+            </button>
+          )}
           <button
             onClick={onLocationClick}
             className="w-full flex items-center space-x-3 text-lg p-3 text-gray-700 hover:bg-gray-100 rounded-lg"
@@ -190,11 +201,7 @@ const MobileNavigation = ({ onLocationClick }) => {
   useEffect(() => {
     if (user) {
       const possibleNames = [
-        user.name,
-        user.businessName,
-        user.full_name,
-        `${user.first_name || ""} ${user.last_name || ""}`.trim(),
-        user.email?.split("@")[0],
+// ... existing code ...
         user.username,
       ].filter(Boolean);
       setProfileName(possibleNames[0] || "Account");
@@ -203,6 +210,11 @@ const MobileNavigation = ({ onLocationClick }) => {
 
   const handleLogout = () => {
     logout();
+    setIsAccountMenuOpen(false);
+  };
+
+  const handleBecomeSellerClick = () => {
+    navigate("/seller-registration");
     setIsAccountMenuOpen(false);
   };
 
@@ -229,6 +241,7 @@ const MobileNavigation = ({ onLocationClick }) => {
                   size={64}
                   strokeWidth={4}
                   showPercentage={false}
+                  displayType="combined" // Explicitly set to 'combined' for clarity, though it's the default
                 >
                   <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center shadow-lg border-4 border-white">
                     <UserIcon className="w-8 h-8 text-white" />
@@ -236,15 +249,16 @@ const MobileNavigation = ({ onLocationClick }) => {
                 </ProfileCompletionIndicator>
               </button>
               <button
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate(user?.is_seller ? "/seller-dashboard" : "/dashboard")}
                 className="flex flex-col items-center justify-center text-gray-600 hover:text-blue-600 w-1/3"
               >
                 <DashboardIcon className="w-7 h-7" />
-                <span className="text-xs font-medium mt-1">Dashboard</span>
+                <span className="text-xs font-medium mt-1">
+                  {user?.is_seller ? "Seller Dashboard" : "Dashboard"}
+                </span>
               </button>
             </>
           ) : (
-            /* --- LOGGED-OUT VIEW --- */
             <>
               <button
                 onClick={() => navigate("/")}
@@ -272,21 +286,21 @@ const MobileNavigation = ({ onLocationClick }) => {
         </div>
       </div>
 
-      {/* The Account menu will only open if the user is logged in */}
-      {user && isAccountMenuOpen && (
-        <AccountMenu
-          user={user}
-          profileName={profileName}
-          onClose={() => setIsAccountMenuOpen(false)}
-          onLogout={handleLogout}
-          onLocationClick={() => {
-            onLocationClick();
-            setIsAccountMenuOpen(false);
-          }}
-        />
-      )}
-    </>
-  );
+{user && isAccountMenuOpen && (
+  <AccountMenu
+    user={user}
+    profileName={profileName}
+    onClose={() => setIsAccountMenuOpen(false)}
+    onLogout={handleLogout}
+    onLocationClick={() => {
+      onLocationClick();
+      setIsAccountMenuOpen(false);
+    }}
+    onBecomeSellerClick={handleBecomeSellerClick} // Pass the new handler
+  />
+)}
+</>
+);
 };
 
 export default MobileNavigation;

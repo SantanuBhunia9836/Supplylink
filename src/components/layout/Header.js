@@ -1,6 +1,6 @@
 // src/components/layout/Header.js
 import React, { useContext, useState } from "react";
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext } from "../../features/auth/AuthContext";
 import { useNavigate } from "react-router-dom";
 import ProfileCompletionIndicator from "../common/ProfileCompletionIndicator";
 
@@ -185,15 +185,17 @@ const Header = ({ pageTitle }) => {
                     className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
                   >
                     <UserIcon className="w-4 h-4" />
-                    <span>Dashboard</span>
+                    <span>{user?.is_seller ? "Seller Dashboard" : "Dashboard"}</span>
                   </button>
-                  <button
-                    onClick={() => navigate("/seller-registration")}
-                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left border-t border-gray-100"
-                  >
-                    <UserIcon className="w-4 h-4" />
-                    <span>Become a Seller</span>
-                  </button>
+                  {user?.is_seller ? null : (
+                    <button
+                      onClick={() => navigate("/seller-registration")}
+                      className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left border-t border-gray-100"
+                    >
+                      <UserIcon className="w-4 h-4" />
+                      <span>Become a Seller</span>
+                    </button>
+                  )}
                   <button
                     onClick={handleLogout}
                     disabled={logoutLoading}

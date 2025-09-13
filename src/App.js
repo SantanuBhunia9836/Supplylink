@@ -8,7 +8,8 @@ import {
   Outlet,
   useNavigate,
 } from "react-router-dom";
-import { AuthContext, AuthProvider } from "./context/AuthContext";
+// ... existing code ...
+import { AuthContext, AuthProvider } from "./features/auth/AuthContext";
 import { LocationProvider } from "./context/LocationContext";
 import { CartProvider } from "./context/CartContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
@@ -24,14 +25,18 @@ import LocationPanel from "./components/common/LocationPanel";
 import Header from "./components/layout/Header";
 
 // --- Page Imports ---
-import LandingPage, { LoginPopup } from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
-import Dashboard from "./pages/Dashboard";
-import SellerDetailPage from "./pages/SellerDetailPage";
-import ProductDetailPage from "./pages/ProductDetailPage";
-import CartPage from "./pages/CartPage";
-import SellerRegistration from "./pages/SellerRegistration";
+import LandingPage, { LoginPopup } from "./features/vendor/pages/LandingPage";
+import LoginPage from "./features/auth/pages/LoginPage";
+// ... existing code ...
+import SellerRegistration from "./features/seller/pages/SellerRegistration"; // Corrected path and consolidated
+import Dashboard from "./features/dashboard/pages/Dashboard";
+import SellerDetailPage from "./features/seller/pages/SellerDetailPage"; // Corrected path to the page
+import ProductDetailPage from "./features/vendor/pages/ProductDetailPage"; // Corrected path to the page
+import CartPage from "./features/vendor/pages/CartPage"; // Corrected path to the page
+import RegisterPage from "./features/auth/pages/RegisterPage"; // Corrected path to the page
+// ... existing code ...
+
+// ... existing code ...
 
 const WebsiteLayout = ({ onLocationClick }) => {
   const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);

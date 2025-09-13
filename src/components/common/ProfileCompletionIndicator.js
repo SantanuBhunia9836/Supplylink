@@ -6,11 +6,17 @@ const ProfileCompletionIndicator = ({
   size = 40,
   strokeWidth = 3,
   showPercentage = false,
+  displayType = "combined",
   children,
 }) => {
-  const { profile_done, seller_profile_done } = profileCompletion;
+  const { profile_done = 0, seller_profile_done = 0 } = profileCompletion || {};
 
-  const completionPercentage = Math.max(profile_done, seller_profile_done);
+  const completionPercentage =
+    displayType === "profile"
+      ? profile_done
+      : seller_profile_done > 0
+      ? seller_profile_done
+      : profile_done;
 
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -28,9 +34,6 @@ const ProfileCompletionIndicator = ({
   const progressColor = getColor(completionPercentage);
 
   return (
-    // --- THIS IS THE FIX ---
-    // The main container now has its size set explicitly. This ensures the
-    // SVG circle and the content inside are perfectly centered.
     <div
       className="relative inline-flex items-center justify-center"
       style={{ width: size, height: size }}
@@ -66,13 +69,15 @@ const ProfileCompletionIndicator = ({
 
       <div className="relative z-10">{children}</div>
 
-      {showPercentage && completionPercentage > 0 && (
+      {showPercentage && (
+        // --- THIS IS THE FIX ---
+        // Added z-20 to ensure this badge renders on top of the z-10 icon
         <div
-          className="absolute -bottom-1 -right-1 bg-white rounded-full w-5 h-5 flex items-center justify-center border-2 border-white shadow-sm"
+          className="absolute z-20 -bottom-1 -right-1 bg-gray/90 backdrop-blur rounded-full w-5 h-5 flex items-center justify-center shadow-sm"
           style={{ fontSize: "8px" }}
         >
           <span className="font-bold" style={{ color: progressColor }}>
-            {completionPercentage}%
+            {Math.round(completionPercentage)}%
           </span>
         </div>
       )}

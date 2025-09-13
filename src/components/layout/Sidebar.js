@@ -1,7 +1,9 @@
 // src/components/layout/Sidebar.js
 import React, { useContext } from 'react';
+// ... existing code ...
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../../context/AuthContext';
+import { AuthContext } from '../../features/auth/AuthContext'; // Corrected path
+// ... existing code ...
 
 // Icon components
 const HomeIcon = (props) => (

@@ -1,7 +1,8 @@
 // src/components/layout/LandingPageHeader.js
 import React, { useState, useContext, useEffect, useRef } from "react";
+// ... existing code ...
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext } from "../../features/auth/AuthContext"; // Corrected path
 import { CartContext } from "../../context/CartContext";
 import { useLocation as useLocationContext } from "../../context/LocationContext";
 import ProfileCompletionIndicator from "../common/ProfileCompletionIndicator";
@@ -55,25 +56,6 @@ const AccountDropdown = ({
         <p className="text-sm text-gray-500">Signed in as</p>
         <p className="font-semibold text-gray-800 truncate">{profileName}</p>
       </div>
-      <button
-        onClick={onDashboard}
-        className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
-      >
-        <svg
-          className="w-4 h-4 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-        Dashboard
-      </button>
       {user?.is_seller ? (
         <button
           onClick={onDashboard}
@@ -95,6 +77,27 @@ const AccountDropdown = ({
           Seller Dashboard
         </button>
       ) : (
+        <button
+          onClick={onDashboard}
+          className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
+        >
+          <svg
+            className="w-4 h-4 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+            />
+          </svg>
+          Dashboard
+        </button>
+      )}
+      {!user?.is_seller && ( // Only show "Become a Seller" if not already a seller
         <button
           onClick={onBecomeSeller}
           className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
@@ -206,6 +209,7 @@ const AuthStatus = ({ onLogin, onSignup, onLocationClick }) => (
   </div>
 );
 
+
 const LandingPageHeader = ({
   onLoginClick,
   onSignupClick,
@@ -255,12 +259,19 @@ const LandingPageHeader = ({
   return (
     <nav className="bg-white/90 backdrop-blur-lg shadow-lg border-b border-gray-100 sticky top-0 z-40">
       <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-        <h1
-          className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent cursor-pointer"
+        <div
+          className="flex items-center cursor-pointer"
           onClick={() => navigate("/")}
         >
-          SupplyLink
-        </h1>
+          <img
+            src="/supplylink-logo.png"
+            alt="SupplyLink Logo"
+            className="h-10 w-auto mr-3 animate-slideIn"
+          />
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            SupplyLink
+          </h1>
+        </div>
         <div className="flex items-center space-x-6">
           {authLoading ? (
             <div className="flex items-center space-x-2">
@@ -282,6 +293,7 @@ const LandingPageHeader = ({
                   size={32}
                   strokeWidth={2}
                   showPercentage={true}
+                  displayType="profile"
                 >
                   <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                     <svg
