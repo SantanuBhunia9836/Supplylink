@@ -54,7 +54,7 @@ const Sidebar = ({ activePage }) => {
   return (
     <div className="w-64 bg-gray-800 text-white flex-col hidden md:flex">
       <div className="h-16 flex items-center justify-center text-2xl font-bold border-b border-gray-700">
-        SupplyLink
+        SupplyLin
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">
         {currentNavItems.map(item => (

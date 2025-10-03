@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { AuthContext } from "../../auth/AuthContext"; 
-import LoadingSpinner from "../../../components/common/LoadingSpinner";
 import { Home } from "lucide-react";
 
 // Import the two distinct dashboard components
@@ -17,9 +16,7 @@ const Dashboard = () => {
   const { user, authLoading } = useContext(AuthContext);
 
   // While checking authentication, show a full-screen loader.
-  if (authLoading) {
-    return <LoadingSpinner text="Loading dashboard..." isFullScreen={true} />;
-  }
+  if (authLoading) return null;
 
   // If the check is complete and there's no user, redirect to the homepage.
   if (!user) {

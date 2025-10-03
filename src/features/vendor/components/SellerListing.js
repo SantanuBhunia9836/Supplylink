@@ -2,14 +2,14 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "../../../context/LocationContext";
 import { searchSellers } from "../../../services/api";
-import FilterSection from "./FilterSection"; // Corrected path
+import FilterSection from "./FilterSection";
 import SellerCard from "./SellerCard";
 import MobileFilterHeader from "../../../components/layout/MobileFilterHeader";
 
 const SellerListing = () => {
   const { location, locationLoading, locationError } = useLocation();
   const [sellers, setSellers] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(true); // Start with true to show initial skeletons
+  const [searchLoading, setSearchLoading] = useState(true);
   const [searchError, setSearchError] = useState(null);
   const [filters, setFilters] = useState({
     city: "",
@@ -18,6 +18,10 @@ const SellerListing = () => {
     sortBy: "distance",
   });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // --- REMOVED ---
+  // The useEffect that automatically set the city filter has been removed
+  // to ensure all sellers are shown by default on the initial load.
 
   const searchSellersData = useCallback(async () => {
     if (!location?.latitude || !location?.longitude) {
@@ -36,38 +40,32 @@ const SellerListing = () => {
 
       if (Array.isArray(sellersData)) {
         const preparedSellers = sellersData.map((seller) => {
-          // The API response provides distance as a string, so we parse it.
           const distanceNum = parseFloat(seller.distance);
           return {
             ...seller,
-            // Pass the numeric distance to the SellerCard.
-            // If conversion fails (returns NaN), pass null instead.
             distance: !isNaN(distanceNum) ? distanceNum : null,
           };
         });
         setSellers(preparedSellers);
       } else {
         console.error("API did not return an array of sellers:", sellersData);
-        setSellers([]); // Ensure sellers is always an array
+        setSellers([]);
       }
-    } catch (err) {
+    } catch (err)      {
       setSearchError(
         err.message || "An error occurred while fetching sellers."
       );
-      setSellers([]); // Clear sellers on error
+      setSellers([]);
     } finally {
       setSearchLoading(false);
     }
-    // By depending on the primitive values of lat/long, we prevent re-runs
-    // caused by the location object reference changing unnecessarily.
-  }, [location?.latitude, location?.longitude, filters]); // Dependencies for the useCallback
+  }, [location?.latitude, location?.longitude, filters]);
 
- 
-   useEffect(() => {
-    // Set a timer to execute the search.
+  useEffect(() => {
+    // Debounce the search to avoid excessive API calls while filters are changing.
     const handler = setTimeout(() => {
       searchSellersData();
-    }, 300); 
+    }, 300);
     return () => {
       clearTimeout(handler);
     };
@@ -77,7 +75,6 @@ const SellerListing = () => {
     setFilters(newFilters);
   };
 
-  // A component to render skeleton loaders while data is being fetched.
   const renderSkeletons = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
       {[...Array(6)].map((_, index) => (
@@ -107,7 +104,6 @@ const SellerListing = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
       <MobileFilterHeader onFilterClick={() => setIsFilterOpen(true)} />
-
       <div className="container mx-auto px-4 py-8">
         <div className="hidden lg:block mb-8 text-center">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
@@ -126,7 +122,6 @@ const SellerListing = () => {
             </p>
           )}
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
             <FilterSection
@@ -136,7 +131,6 @@ const SellerListing = () => {
               onClose={() => setIsFilterOpen(false)}
             />
           </div>
-
           <div className="lg:col-span-3">
             {searchLoading ? (
               renderSkeletons()

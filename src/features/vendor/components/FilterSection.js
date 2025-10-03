@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { apiGetCities } from "../../../services/api";
 
-// --- Icon Component ---
 const CloseIcon = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -21,17 +21,103 @@ const CloseIcon = (props) => (
 
 const FilterSection = ({ onFilterChange, filters, isOpen, onClose }) => {
   const [localFilters, setLocalFilters] = useState(filters);
+  const [citySuggestions, setCitySuggestions] = useState([]);
+  const [filteredCitySuggestions, setFilteredCitySuggestions] = useState([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [cityError, setCityError] = useState(null);
+  const [cityInput, setCityInput] = useState(filters.city);
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const cityInputRef = useRef(null);
 
-  // This ensures the local state updates if the parent's filters change (e.g., on clear)
   useEffect(() => {
     setLocalFilters(filters);
+    setCityInput(filters.city);
   }, [filters]);
+
+  useEffect(() => {
+    const fetchCities = async () => {
+      setLoadingCities(true);
+      setCityError(null);
+      try {
+        const response = await apiGetCities();
+        // --- FIX APPLIED HERE ---
+        // The response is an array of strings, so we use it directly.
+        if (response && Array.isArray(response.cities)) {
+          // Filter out any non-string or empty values for safety
+          const validCityNames = response.cities.filter(
+            (city) => typeof city === "string" && city
+          );
+          setCitySuggestions(validCityNames);
+        } else {
+          setCitySuggestions([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch cities:", err);
+        setCityError("Failed to load cities. Please try again.");
+        setCitySuggestions([]);
+      } finally {
+        setLoadingCities(false);
+      }
+    };
+
+    fetchCities();
+  }, []);
+
+  useEffect(() => {
+    if (!cityInput) {
+      setFilteredCitySuggestions(citySuggestions);
+    } else {
+      setFilteredCitySuggestions(
+        citySuggestions.filter((city) =>
+          city.toLowerCase().startsWith(cityInput.toLowerCase())
+        )
+      );
+    }
+  }, [cityInput, citySuggestions]);
 
   const handleFilterChange = (key, value) => {
     const newFilters = { ...localFilters, [key]: value };
     setLocalFilters(newFilters);
-    // Apply filters instantly as the user interacts
-    onFilterChange(newFilters);
+    if (key !== "city") {
+      onFilterChange(newFilters);
+    }
+  };
+
+  const handleCityInputChange = (e) => {
+    setCityInput(e.target.value);
+    setShowCityDropdown(true);
+  };
+
+  const handleCitySelect = (city) => {
+    setCityInput(city);
+    onFilterChange({ ...localFilters, city: city });
+    setShowCityDropdown(false);
+  };
+
+  const handleCityInputKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onFilterChange({ ...localFilters, city: cityInput });
+      setShowCityDropdown(false);
+      if (cityInputRef.current) {
+        cityInputRef.current.blur();
+      }
+    }
+  };
+
+  const handleCityInputFocus = () => {
+    setShowCityDropdown(true);
+  };
+
+  const handleCityInputBlur = (e) => {
+    setTimeout(() => {
+      if (
+        !e.relatedTarget ||
+        !e.relatedTarget.className.includes("city-suggestion-item")
+      ) {
+        setShowCityDropdown(false);
+      }
+    }, 150);
   };
 
   const clearFilters = () => {
@@ -42,6 +128,7 @@ const FilterSection = ({ onFilterChange, filters, isOpen, onClose }) => {
       sortBy: "distance",
     };
     setLocalFilters(clearedFilters);
+    setCityInput("");
     onFilterChange(clearedFilters);
   };
 
@@ -91,36 +178,50 @@ const FilterSection = ({ onFilterChange, filters, isOpen, onClose }) => {
             </button>
           </div>
 
-          {/* --- Main content --- */}
-          <div className="p-6 space-y-6 overflow-y-auto flex-grow">
-            {/* Desktop Header */}
-            <div className="hidden md:flex items-center justify-between">
-              <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                Filters
-              </h3>
-              <button
-                onClick={clearFilters}
-                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-              >
-                Clear All
-              </button>
-            </div>
-
+          <div className="p-4 flex flex-col space-y-6 flex-grow overflow-y-auto">
             {/* City Filter */}
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 City
               </label>
               <input
+                ref={cityInputRef}
                 type="text"
-                value={localFilters.city}
-                onChange={(e) => handleFilterChange("city", e.target.value)}
+                value={cityInput}
+                onChange={handleCityInputChange}
+                onKeyDown={handleCityInputKeyDown}
+                onFocus={handleCityInputFocus}
+                onBlur={handleCityInputBlur}
                 placeholder="Enter city name"
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500"
+                autoComplete="off"
               />
+              {showCityDropdown && (
+                <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-60 overflow-y-auto">
+                  {filteredCitySuggestions.length > 0 ? (
+                    filteredCitySuggestions.map((city) => (
+                      <li
+                        key={city}
+                        className="city-suggestion-item px-4 py-2 cursor-pointer hover:bg-gray-100"
+                        onMouseDown={() => handleCitySelect(city)}
+                      >
+                        {city}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="px-4 py-2 text-gray-500">No cities found</li>
+                  )}
+                </ul>
+              )}
+              {loadingCities && (
+                <p className="text-sm text-gray-500 mt-1">Loading cities...</p>
+              )}
+              {cityError && (
+                <p className="text-sm text-red-500 mt-1">{cityError}</p>
+              )}
             </div>
 
-            {/* Seller Type Filter */}
+            {/* Other Filters... */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Seller Type
@@ -141,7 +242,6 @@ const FilterSection = ({ onFilterChange, filters, isOpen, onClose }) => {
               </select>
             </div>
 
-            {/* Range Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Distance Range
@@ -160,7 +260,6 @@ const FilterSection = ({ onFilterChange, filters, isOpen, onClose }) => {
               </select>
             </div>
 
-            {/* Sort By */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Sort By

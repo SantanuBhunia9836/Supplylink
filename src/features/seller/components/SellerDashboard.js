@@ -1,8 +1,9 @@
+// src/pages/Seller/SellerDashboard.js
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // <-- Import useNavigate
+import { useNavigate } from "react-router-dom";
 import { getSellerProfile } from "../../../services/api";
 import LoadingSpinner from "../../../components/common/LoadingSpinner";
-import Header from "../../../components/layout/Header"; // <-- Import Header
+import Header from "../../../components/layout/SellerHeader";
 import SellerHomepage from "./SellerHomepage";
 import SellerProfile from "./SellerProfile";
 import SellerProducts from "./SellerProducts";
@@ -10,7 +11,15 @@ import SellerOrders from "./SellerOrders";
 import SellerDeliveries from "./SellerDeliveries";
 import FactoryInfoForm from "./seller_registration/FactoryInfoForm";
 import LocationStep from "./seller_registration/LocationStep";
-import { Home, User, Package, ShoppingBag, Truck, Lock, Globe } from "lucide-react"; // <-- Import Globe icon
+import {
+  Home,
+  User,
+  Package,
+  ShoppingBag,
+  Truck,
+  Lock,
+  Globe,
+} from "lucide-react";
 
 const SellerDashboard = () => {
   const [profile, setProfile] = useState(null);
@@ -24,7 +33,7 @@ const SellerDashboard = () => {
   });
   const [sellerId, setSellerId] = useState(null);
   const [factoryId, setFactoryId] = useState(null);
-  const navigate = useNavigate(); // <-- Initialize navigate
+  const navigate = useNavigate();
 
   const fetchProfile = useCallback(async () => {
     setLoading(true);
@@ -75,7 +84,6 @@ const SellerDashboard = () => {
 
   const activeTabIndex = tabs.findIndex((tab) => tab.id === activeTab);
 
-  // --- Helper to get the current page title for the Header ---
   const getPageTitle = () => {
     const currentTab = tabs.find((tab) => tab.id === activeTab);
     return currentTab ? currentTab.label : "Dashboard";
@@ -148,6 +156,7 @@ const SellerDashboard = () => {
             profile={profile}
             missingInfo={missingInfo}
             onAction={setActiveForm}
+            onProfileUpdate={fetchProfile} // Pass the fetchProfile function as a prop
           />
         );
       case "products":
@@ -181,9 +190,7 @@ const SellerDashboard = () => {
           isActive
             ? "bg-blue-600 text-white shadow-lg"
             : "text-gray-600 hover:bg-gray-200"
-        } ${
-          isLocked && !onClick ? "cursor-not-allowed opacity-60" : ""
-        }`}
+        } ${isLocked && !onClick ? "cursor-not-allowed opacity-60" : ""}`}
       >
         {isLocked && !onClick ? (
           <Lock className="w-5 h-5" />
@@ -199,10 +206,8 @@ const SellerDashboard = () => {
     <div className="h-screen flex flex-col bg-gray-50">
       {renderActiveForm()}
 
-      {/* --- ADDED HEADER --- */}
       <Header pageTitle={getPageTitle()} />
 
-      {/* --- Main content area adjusted to grow --- */}
       <div className="flex-grow flex flex-col md:flex-row md:gap-6 md:p-4 overflow-hidden">
         {/* Desktop Sidebar */}
         <div className="hidden md:flex w-64 flex-shrink-0">
@@ -221,7 +226,6 @@ const SellerDashboard = () => {
               ))}
             </div>
             <div className="mt-auto pt-4 border-t">
-              {/* --- ADDED HOMEPAGE BUTTON --- */}
               <DesktopTabButton
                 tabName="homepage-nav"
                 icon={Globe}

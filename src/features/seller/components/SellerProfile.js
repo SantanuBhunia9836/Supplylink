@@ -1,5 +1,7 @@
 // src/components/Seller/SellerProfile.js
-import React from "react";
+import React, { useState } from "react";
+import EditProfileForm from "./EditProfileForm"; // Import the new form component
+import { Edit } from "lucide-react"; // Import an icon for the button
 
 const InfoCard = ({ title, children }) => (
   <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
@@ -27,16 +29,39 @@ const ActionCard = ({ title, text, buttonLabel, onClick }) => (
   </div>
 );
 
-const SellerProfile = ({ profile, missingInfo, onAction }) => {
-  // Note: The parent component (SellerDashboard) now determines what's missing
-  // and passes it via the `missingInfo` prop.
+const SellerProfile = ({ profile, missingInfo, onAction, onProfileUpdate }) => {
+  const [isEditing, setIsEditing] = useState(false); // State to control the edit modal
 
   const factory = profile?.factories?.[0];
   const location = factory?.location;
 
+  const handleEditComplete = () => {
+    setIsEditing(false);
+    onProfileUpdate(); // Refresh the profile data in the parent component
+  };
+
   return (
     <div>
-      <h2 className="text-3xl font-bold text-gray-800 mb-6">My Profile</h2>
+      {/* Conditionally render the EditProfileForm modal */}
+      {isEditing && (
+        <EditProfileForm
+          profile={profile}
+          onComplete={handleEditComplete}
+          onClose={() => setIsEditing(false)}
+        />
+      )}
+
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-3xl font-bold text-gray-800">My Profile</h2>
+        {/* Add the Edit Profile button */}
+        <button
+          onClick={() => setIsEditing(true)}
+          className="flex items-center bg-blue-100 text-blue-700 font-bold py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors"
+        >
+          <Edit className="w-4 h-4 mr-2" />
+          Edit Profile
+        </button>
+      </div>
 
       {/* --- DYNAMIC ACTION CARDS --- */}
       {missingInfo.factory && (

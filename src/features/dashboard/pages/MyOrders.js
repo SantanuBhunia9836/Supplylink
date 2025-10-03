@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
 
-const orders = [
-    { id: 'ORD-001', date: '2025-09-12', seller: 'Global Electronics', items: 2, total: '₹15,000', status: 'Shipped' },
-    { id: 'ORD-002', date: '2025-09-11', seller: 'Crafty Goods Co.', items: 5, total: '₹3,200', status: 'Delivered' },
-    { id: 'ORD-003', date: '2025-09-10', seller: 'Office Supplies Inc.', items: 10, total: '₹8,500', status: 'Pending' },
-    { id: 'ORD-004', date: '2025-09-09', seller: 'Fresh Produce Direct', items: 8, total: '₹1,250', status: 'Delivered' },
-    { id: 'ORD-005', date: '2025-09-08', seller: 'Global Electronics', items: 1, total: '₹45,000', status: 'Cancelled' },
-    { id: 'ORD-006', date: '2025-09-07', seller: 'Office Supplies Inc.', items: 3, total: '₹2,100', status: 'Delivered' },
-];
-
 const getStatusColor = (status) => {
     switch (status) {
         case 'Shipped': return 'bg-blue-100 text-blue-800';
@@ -19,11 +10,11 @@ const getStatusColor = (status) => {
     }
 };
 
-const ShopOrders = () => {
+const ShopOrders = ({ allOrders }) => { // <-- Accept allOrders as a prop
     const [activeTab, setActiveTab] = useState('All');
     const tabs = ['All', 'Pending', 'Shipped', 'Delivered', 'Cancelled'];
 
-    const filteredOrders = orders.filter(order => {
+    const filteredOrders = allOrders.filter(order => {
         if (activeTab === 'All') return true;
         return order.status === activeTab;
     });

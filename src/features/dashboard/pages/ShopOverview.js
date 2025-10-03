@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, ShoppingBag, Clock, DollarSign } from 'lucide-react';
+import { ShoppingBag, Clock, DollarSign } from 'lucide-react';
 
 const StatCard = ({ icon, title, value, color }) => (
     <div className="bg-white p-6 rounded-xl shadow-md flex items-center gap-6">
@@ -14,44 +14,30 @@ const StatCard = ({ icon, title, value, color }) => (
     </div>
 );
 
+// Helper to assign colors based on status for the recent orders table
+const getStatusColor = (status) => {
+    switch (status) {
+        case 'Shipped': return 'bg-blue-100 text-blue-800';
+        case 'Delivered': return 'bg-green-100 text-green-800';
+        case 'Pending': return 'bg-yellow-100 text-yellow-800';
+        case 'Cancelled': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+};
 
-const recentOrders = [
-    { id: 'ORD-001', seller: 'Global Electronics', date: '2025-09-12', total: '₹15,000', status: 'Shipped', statusColor: 'bg-blue-100 text-blue-800' },
-    { id: 'ORD-002', seller: 'Crafty Goods Co.', date: '2025-09-11', total: '₹3,200', status: 'Delivered', statusColor: 'bg-green-100 text-green-800' },
-    { id: 'ORD-003', seller: 'Office Supplies Inc.', date: '2025-09-10', total: '₹8,500', status: 'Pending', statusColor: 'bg-yellow-100 text-yellow-800' },
-    { id: 'ORD-004', seller: 'Fresh Produce Direct', date: '2025-09-09', total: '₹1,250', status: 'Delivered', statusColor: 'bg-green-100 text-green-800' },
-];
-
-
-const ShopOverview = () => {
+const ShopOverview = ({ stats, recentOrders }) => {
     const navigate = useNavigate();
 
     return (
         <div className="space-y-8">
-            {/* Upgrade Banner */}
-            <div className="bg-blue-600 text-white p-8 rounded-xl shadow-lg flex flex-col md:flex-row items-center justify-between gap-6">
-                <div>
-                    <h2 className="text-3xl font-bold mb-2">Unlock Your Potential: Become a Seller!</h2>
-                    <p className="text-blue-100 max-w-2xl">
-                        Set up your own shop, list your products, and start reaching thousands of new customers today.
-                    </p>
-                </div>
-                <button
-                    onClick={() => navigate('/seller-registration')}
-                    className="bg-white text-blue-600 font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-100 transition-transform transform hover:scale-105 whitespace-nowrap flex items-center gap-2"
-                >
-                    Get Started <ArrowRight className="w-5 h-5" />
-                </button>
-            </div>
-
-            {/* Statistic Cards */}
+            {/* Statistic Cards - Now using props */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <StatCard icon={<ShoppingBag size={28} className="text-blue-600"/>} title="Total Orders Placed" value="42" color="bg-blue-100" />
-                <StatCard icon={<Clock size={28} className="text-yellow-600"/>} title="Pending Orders" value="3" color="bg-yellow-100" />
-                <StatCard icon={<DollarSign size={28} className="text-green-600"/>} title="Total Spend" value="₹2,45,800" color="bg-green-100" />
+                <StatCard icon={<ShoppingBag size={28} className="text-blue-600"/>} title="Total Orders Placed" value={stats.totalOrders} color="bg-blue-100" />
+                <StatCard icon={<Clock size={28} className="text-yellow-600"/>} title="Pending Orders" value={stats.pendingOrders} color="bg-yellow-100" />
+                <StatCard icon={<DollarSign size={28} className="text-green-600"/>} title="Total Spend" value={`₹${stats.totalSpend.toLocaleString('en-IN')}`} color="bg-green-100" />
             </div>
 
-             {/* Recent Orders Table */}
+             {/* Recent Orders Table - Now using props */}
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h3 className="text-xl font-semibold text-gray-800 mb-4">Recent Orders</h3>
                 <div className="overflow-x-auto">
@@ -73,7 +59,7 @@ const ShopOverview = () => {
                                     <td className="p-4 text-gray-600">{order.date}</td>
                                     <td className="p-4 font-semibold text-gray-800">{order.total}</td>
                                     <td className="p-4">
-                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${order.statusColor}`}>
+                                        <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
                                             {order.status}
                                         </span>
                                     </td>

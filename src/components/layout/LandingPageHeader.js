@@ -1,11 +1,11 @@
 // src/components/layout/LandingPageHeader.js
 import React, { useState, useContext, useEffect, useRef } from "react";
-// ... existing code ...
 import { useNavigate } from "react-router-dom";
-import { AuthContext } from "../../features/auth/AuthContext"; // Corrected path
+import { AuthContext } from "../../features/auth/AuthContext";
 import { CartContext } from "../../context/CartContext";
 import { useLocation as useLocationContext } from "../../context/LocationContext";
 import ProfileCompletionIndicator from "../common/ProfileCompletionIndicator";
+import { getVendorLocations } from "../../services/api";
 
 const CartIcon = ({ cartCount }) => {
   const navigate = useNavigate();
@@ -42,10 +42,10 @@ const CartIcon = ({ cartCount }) => {
 const AccountDropdown = ({
   user,
   profileName,
-  onDashboard,
+  onVendorDashboard,
+  onSellerDashboard,
   onLogout,
   onBecomeSeller,
-  onLocation,
   isOpen,
 }) => {
   if (!isOpen) return null;
@@ -56,9 +56,30 @@ const AccountDropdown = ({
         <p className="text-sm text-gray-500">Signed in as</p>
         <p className="font-semibold text-gray-800 truncate">{profileName}</p>
       </div>
-      {user?.is_seller ? (
+
+      <button
+        onClick={onVendorDashboard}
+        className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
+      >
+        <svg
+          className="w-4 h-4 mr-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6h16M4 12h16M4 18h7"
+          ></path>
+        </svg>
+        Vendor Dashboard
+      </button>
+
+      {user?.is_seller && (
         <button
-          onClick={onDashboard}
+          onClick={onSellerDashboard}
           className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
         >
           <svg
@@ -76,28 +97,9 @@ const AccountDropdown = ({
           </svg>
           Seller Dashboard
         </button>
-      ) : (
-        <button
-          onClick={onDashboard}
-          className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
-        >
-          <svg
-            className="w-4 h-4 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            />
-          </svg>
-          Dashboard
-        </button>
       )}
-      {!user?.is_seller && ( // Only show "Become a Seller" if not already a seller
+
+      {!user?.is_seller && (
         <button
           onClick={onBecomeSeller}
           className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
@@ -118,8 +120,56 @@ const AccountDropdown = ({
           Become a Seller
         </button>
       )}
+      <hr className="my-1" />
       <button
-        onClick={onLocation}
+        onClick={onLogout}
+        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center"
+      >
+        <svg
+          className="w-4 h-4 mr-2"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+          />
+        </svg>
+        Logout
+      </button>
+    </div>
+  );
+};
+
+const LocationDropdown = ({
+  isOpen,
+  locations,
+  onSelect,
+  onDetect,
+  loading,
+}) => {
+  if (!isOpen) return null;
+
+  const formatAddress = (loc) => {
+    const parts = [
+      loc.address_line1,
+      loc.address_line2,
+      loc.city,
+      loc.state,
+      loc.postal_code,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    return parts;
+  };
+
+  return (
+    <div className="absolute top-full right-0 mt-2 bg-white rounded-lg shadow-lg border border-gray-200 py-2 w-64 z-50">
+      <button
+        onClick={onDetect}
         className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
       >
         <svg
@@ -141,28 +191,29 @@ const AccountDropdown = ({
             d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
           />
         </svg>
-        Location
+        Detect Current Location
       </button>
       <hr className="my-1" />
-      <button
-        onClick={onLogout}
-        className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center"
-      >
-        <svg
-          className="w-4 h-4 mr-2"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-          />
-        </svg>
-        Logout
-      </button>
+      <div className="px-4 pt-2 pb-1 text-xs font-semibold text-gray-400 uppercase">
+        Saved Locations
+      </div>
+      {loading ? (
+        <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+      ) : locations.length > 0 ? (
+        locations.map((loc) => (
+          <button
+            key={loc.id}
+            onClick={() => onSelect(loc)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100"
+          >
+            {formatAddress(loc)}
+          </button>
+        ))
+      ) : (
+        <div className="px-4 py-2 text-sm text-gray-500">
+          No saved locations.
+        </div>
+      )}
     </div>
   );
 };
@@ -209,7 +260,6 @@ const AuthStatus = ({ onLogin, onSignup, onLocationClick }) => (
   </div>
 );
 
-
 const LandingPageHeader = ({
   onLoginClick,
   onSignupClick,
@@ -218,11 +268,22 @@ const LandingPageHeader = ({
   const { user, logout, authLoading, profileCompletion } =
     useContext(AuthContext);
   const { cartCount } = useContext(CartContext);
+  const {
+    location: currentLocation,
+    updateLocation,
+    getCurrentLocation,
+    locationLoading,
+  } = useLocationContext();
+
   const navigate = useNavigate();
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
+  const [locations, setLocations] = useState([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
   const [profileName, setProfileName] = useState(null);
   const [profileLoading, setProfileLoading] = useState(false);
-  const dropdownRef = useRef(null);
+  const accountDropdownRef = useRef(null);
+  const locationDropdownRef = useRef(null);
 
   useEffect(() => {
     if (user) {
@@ -247,14 +308,53 @@ const LandingPageHeader = ({
   }, [user]);
 
   useEffect(() => {
+    if (user) {
+      const fetchLocations = async () => {
+        setLocationsLoading(true);
+        try {
+          const data = await getVendorLocations();
+          setLocations(Array.isArray(data) ? data : []);
+        } catch (error) {
+          console.error("Failed to fetch saved locations:", error.message);
+          setLocations([]);
+        } finally {
+          setLocationsLoading(false);
+        }
+      };
+      fetchLocations();
+    } else {
+      setLocations([]);
+    }
+  }, [user]);
+
+  useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (
+        accountDropdownRef.current &&
+        !accountDropdownRef.current.contains(event.target)
+      ) {
         setIsAccountDropdownOpen(false);
+      }
+      if (
+        locationDropdownRef.current &&
+        !locationDropdownRef.current.contains(event.target)
+      ) {
+        setIsLocationDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleSelectLocation = (loc) => {
+    updateLocation(loc);
+    setIsLocationDropdownOpen(false);
+  };
+
+  const handleDetectLocation = () => {
+    getCurrentLocation();
+    setIsLocationDropdownOpen(false);
+  };
 
   return (
     <nav className="bg-white/90 backdrop-blur-lg shadow-lg border-b border-gray-100 sticky top-0 z-40">
@@ -279,67 +379,110 @@ const LandingPageHeader = ({
               <span className="text-sm text-gray-500">Checking...</span>
             </div>
           ) : user ? (
-            <div
-              className="relative flex items-center space-x-6"
-              ref={dropdownRef}
-            >
+            <div className="flex items-center space-x-4">
               <CartIcon cartCount={cartCount} />
-              <button
-                onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)}
-                className="flex items-center space-x-2 pl-2 pr-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-              >
-                <ProfileCompletionIndicator
-                  profileCompletion={profileCompletion}
-                  size={32}
-                  strokeWidth={2}
-                  showPercentage={true}
-                  displayType="profile"
+
+              <div className="relative" ref={locationDropdownRef}>
+                <button
+                  onClick={() =>
+                    setIsLocationDropdownOpen(!isLocationDropdownOpen)
+                  }
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all duration-200 flex items-center"
                 >
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
-                  </div>
-                </ProfileCompletionIndicator>
-                <span className="font-medium text-sm">
-                  {profileLoading ? "Loading..." : profileName || "Account"}
-                </span>
-                <svg
-                  className={`w-4 h-4 transition-transform ${
-                    isAccountDropdownOpen ? "rotate-180" : ""
-                  }`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+                  <svg
+                    className="w-5 h-5 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span className="text-sm font-medium hidden md:inline">
+                    {locationLoading
+                      ? "..."
+                      : currentLocation?.city || "Set Location"}
+                  </span>
+                </button>
+                <LocationDropdown
+                  isOpen={isLocationDropdownOpen}
+                  locations={locations}
+                  loading={locationsLoading}
+                  onSelect={handleSelectLocation}
+                  onDetect={handleDetectLocation}
+                />
+              </div>
+
+              <div className="relative" ref={accountDropdownRef}>
+                <button
+                  onClick={() =>
+                    setIsAccountDropdownOpen(!isAccountDropdownOpen)
+                  }
+                  className="flex items-center space-x-2 pl-2 pr-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  <ProfileCompletionIndicator
+                    profileCompletion={profileCompletion}
+                    size={32}
                     strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </button>
-              <AccountDropdown
-                isOpen={isAccountDropdownOpen}
-                user={user}
-                profileName={profileName}
-                onClose={() => setIsAccountDropdownOpen(false)}
-                onDashboard={() => navigate("/dashboard")}
-                onLogout={logout}
-                onBecomeSeller={() => navigate("/seller-registration")}
-                onLocation={onLocationClick}
-              />
+                    showPercentage={true}
+                    displayType="profile"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                    </div>
+                  </ProfileCompletionIndicator>
+                  <span className="font-medium text-sm">
+                    {profileLoading ? "Loading..." : profileName || "Account"}
+                  </span>
+                  <svg
+                    className={`w-4 h-4 transition-transform ${
+                      isAccountDropdownOpen ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                </button>
+                <AccountDropdown
+                  isOpen={isAccountDropdownOpen}
+                  user={user}
+                  profileName={profileName}
+                  onClose={() => setIsAccountDropdownOpen(false)}
+                  onVendorDashboard={() => navigate("/vendor-dashboard")}
+                  onSellerDashboard={() => navigate("/seller-dashboard")}
+                  onLogout={logout}
+                  onBecomeSeller={() => navigate("/seller-registration")}
+                />
+              </div>
             </div>
           ) : (
             <div className="hidden md:flex items-center space-x-6">

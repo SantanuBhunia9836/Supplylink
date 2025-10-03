@@ -233,19 +233,24 @@ export const getVendorProfile = async () => {
   }
 };
 
-export const getSellerProfile = async () => {
-  const endpoint = `${API_BASE_URL}/seller/profile/`;
+export const getVendorLocations = async () => {
+  const endpoint = `${API_BASE_URL}/vendor/locations`; // Assuming this endpoint exists or will be created
   try {
     const response = await fetch(endpoint, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
       credentials: "include",
     });
     const responseData = await response.json();
     return handleApiError(response, responseData);
   } catch (error) {
+    console.error("🚨 Failed to fetch vendor locations:", error);
+    if (error instanceof TypeError) {
+      throw new Error("Network error. Please check your connection.");
+    }
     throw error;
   }
 };
@@ -273,14 +278,65 @@ export const apiCreateVendorLocation = async (locationData) => {
   }
 };
 
+export const getSellerProfile = async () => {
+  const endpoint = `${API_BASE_URL}/seller/profile/`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    throw error;
+  }
+};
+
+// --- START: ADDED CODE ---
+export const apiEditSellerProfile = async (profileData) => {
+  const endpoint = `${API_BASE_URL}/seller/edit/profile`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(profileData),
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to edit seller profile:", error);
+    throw error;
+  }
+};
+// --- END: ADDED CODE ---
+
 export const searchSellers = async (latitude, longitude, filters = {}) => {
   const endpoint = `${API_BASE_URL}/seller/search`;
-  try {
-    const payload = {
-      latitude: latitude,
-      longtitude: longitude,
-    };
 
+  // Build the payload according to the required API body structure
+  const payload = {
+    latitude: latitude,
+    longtitude: longitude,
+    min_distance_km: 0, // Default minimum distance
+    // Use the selected range, otherwise default to a wide search area
+    max_distance_km: filters.range ? parseInt(filters.range, 10) : 500,
+  };
+
+  // Only add the 'city' key to the payload if a city has been selected
+  if (filters.city) {
+    payload.city = filters.city;
+  }
+  
+  // Note: The API body you provided does not include fields for 'sellerType' or 'sortBy'.
+  // Therefore, those filters from the frontend will be ignored in this API call.
+
+  try {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
@@ -311,6 +367,24 @@ export const searchSellers = async (latitude, longitude, filters = {}) => {
   }
 };
 
+export const apiGetCities = async () => {
+  const endpoint = `${API_BASE_URL}/seller/cities/`;
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    });
+    const responseData = await response.json();
+    return handleApiError(response, responseData);
+  } catch (error) {
+    console.error("🚨 Failed to fetch cities:", error);
+    throw error;
+  }
+};
 
 export const getSellerPageDetails = async (factoryId) => {
   const endpoint = `${API_BASE_URL}/seller/seller-detail/${factoryId}`;
@@ -407,6 +481,8 @@ export const getProductDetails = async (productId) => {
   }
 };
 
+
+
 export const apiCreateSeller = async (sellerData) => {
   const endpoint = `${API_BASE_URL}/seller/create/`;
   const payload = {
@@ -500,8 +576,6 @@ export const apiCreateProducts = async (products) => {
     throw error;
   }
 };
-
-// --- MOCK FUNCTIONS TO FIX COMPILATION ERRORS ---
 
 export const getShopDashboardData = async () => {
   console.log("Mocked getShopDashboardData");

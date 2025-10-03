@@ -8,10 +8,12 @@ import {
   Outlet,
   useNavigate,
 } from "react-router-dom";
-// ... existing code ...
+// --- Context Imports ---
 import { AuthContext, AuthProvider } from "./features/auth/AuthContext";
 import { LocationProvider } from "./context/LocationContext";
 import { CartProvider } from "./context/CartContext";
+import { LoadingProvider, useLoading } from "./context/LoadingContext";
+import AnimatedLoader, { RouteChangeLoader } from './components/common/AnimatedLoader';
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
 import { ToastContainer } from "react-toastify";
@@ -22,21 +24,24 @@ import LandingPageHeader from "./components/layout/LandingPageHeader";
 import LandingPageFooter from "./components/layout/LandingPageFooter";
 import MobileNavigation from "./components/layout/MobileNavigation";
 import LocationPanel from "./components/common/LocationPanel";
-import Header from "./components/layout/Header";
 
 // --- Page Imports ---
 import LandingPage, { LoginPopup } from "./features/vendor/pages/LandingPage";
 import LoginPage from "./features/auth/pages/LoginPage";
-// ... existing code ...
-import SellerRegistration from "./features/seller/pages/SellerRegistration"; // Corrected path and consolidated
-import Dashboard from "./features/dashboard/pages/Dashboard";
-import SellerDetailPage from "./features/seller/pages/SellerDetailPage"; // Corrected path to the page
-import ProductDetailPage from "./features/vendor/pages/ProductDetailPage"; // Corrected path to the page
-import CartPage from "./features/vendor/pages/CartPage"; // Corrected path to the page
-import RegisterPage from "./features/auth/pages/RegisterPage"; // Corrected path to the page
-// ... existing code ...
+import RegisterPage from "./features/auth/pages/RegisterPage";
+import SellerRegistration from "./features/seller/pages/SellerRegistration";
+import SellerDetailPage from "./features/seller/pages/SellerDetailPage";
+// import ProductDetailPage from "./features/seller/pages/ProductDetailPage";
+import CartPage from "./features/vendor/pages/CartPage";
+// --- NEW: Import checkout pages ---
+import CheckoutPage from "./features/vendor/pages/CheckoutPage";
+import OrderSuccessPage from "./features/vendor/pages/OrderSuccessPage";
 
-// ... existing code ...
+
+// --- Dashboard Imports ---
+import VendorDashboard from "./features/vendor/components/VendorDashboard";
+import SellerDashboard from "./features/seller/components/SellerDashboard";
+
 
 const WebsiteLayout = ({ onLocationClick }) => {
   const [isLoginPopupOpen, setIsLoginPopupOpen] = useState(false);
@@ -63,12 +68,21 @@ const WebsiteLayout = ({ onLocationClick }) => {
   );
 };
 
+const GlobalLoader = () => {
+  const { isLoading } = useLoading();
+  return isLoading ? <AnimatedLoader /> : null;
+};
+
 function AppContent() {
   const { user } = useContext(AuthContext);
   const [isLocationPanelOpen, setIsLocationPanelOpen] = useState(false);
 
+  const DashboardRedirect = () => {
+    const { user } = useContext(AuthContext);
+    return <Navigate to={user?.is_seller ? "/seller-dashboard" : "/vendor-dashboard"} replace />;
+  };
+
   return (
-    // --- FIX: Added all required 'future' flags to opt-in to v7 behaviors ---
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <ToastContainer
         position="top-right"
@@ -82,6 +96,10 @@ function AppContent() {
         pauseOnHover
         theme="light"
       />
+      
+      <GlobalLoader />
+      <RouteChangeLoader />
+
       <div className="flex flex-col min-h-screen pb-16 md:pb-0">
         <Routes>
           <Route
@@ -93,8 +111,18 @@ function AppContent() {
           >
             <Route path="/" element={<LandingPage />} />
             <Route path="/seller/:id" element={<SellerDetailPage />} />
-            <Route path="/product/:id" element={<ProductDetailPage />} />
+            {/* <Route path="/product/:id" element={<ProductDetailPage />} /> */}
             <Route path="/cart" element={<CartPage />} />
+
+            {/* --- NEW: Add protected routes for checkout and order success --- */}
+            <Route
+              path="/checkout"
+              element={user ? <CheckoutPage /> : <Navigate to="/login" />}
+            />
+            <Route
+              path="/order-success"
+              element={user ? <OrderSuccessPage /> : <Navigate to="/login" />}
+            />
           </Route>
 
           <Route
@@ -110,8 +138,16 @@ function AppContent() {
             element={user ? <SellerRegistration /> : <Navigate to="/login" />}
           />
           <Route
-            path="/dashboard/*"
-            element={user ? <Dashboard /> : <Navigate to="/login" />}
+            path="/dashboard"
+            element={user ? <DashboardRedirect /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/vendor-dashboard/*"
+            element={user ? <VendorDashboard /> : <Navigate to="/login" />}
+          />
+          <Route
+            path="/seller-dashboard/*"
+            element={user?.is_seller ? <SellerDashboard /> : <Navigate to="/vendor-dashboard" />}
           />
 
           <Route path="*" element={<Navigate to="/" />} />
@@ -137,7 +173,9 @@ function App() {
       <LocationProvider>
         <AuthProvider>
           <CartProvider>
-            <AppContent />
+            <LoadingProvider>
+              <AppContent />
+            </LoadingProvider>
           </CartProvider>
         </AuthProvider>
       </LocationProvider>

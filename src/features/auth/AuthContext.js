@@ -1,3 +1,5 @@
+// AuthContext.js (UNCHANGED)
+
 import React, { createContext, useState, useCallback, useEffect } from "react";
 import {
   apiLogin,
@@ -7,20 +9,106 @@ import {
 } from "../../services/api";
 import { useLocation } from "../../context/LocationContext"; // Ensure this path is correct
 
-// --- FullScreenLoader (MODIFIED) ---
+// --- FullScreenLoader (UNCHANGED) ---
 const FullScreenLoader = () => (
-  <div className="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[9999]">
-    {/* Logo added here */}
-    <img
-      src="/supplylink-logo.png"
-      alt="SupplyLink Logo"
-      className="h-24 mb-6 animate-pulse"
-    />
-    <div className="text-white text-3xl font-bold mb-4">SupplyLink</div>
-    <div className="w-64 h-1 bg-gray-700 rounded-full overflow-hidden">
+  <div className="fixed inset-0 bg-gray-900 flex flex-col items-center justify-center z-[9999] overflow-hidden">
+    
+    {/* A single container for all animated elements to control layering and positioning */}
+    <div className="relative mb-2 flex justify-center items-center w-48 h-32">
+      {/* ✨ MODIFIED: The streak container is now the same size as the logo */}
+      <div className="absolute w-24 h-24 z-0">
+        <div className="streak"></div>
+        <div className="streak"></div>
+        <div className="streak"></div>
+        <div className="streak"></div>
+        <div className="streak"></div>
+        <div className="streak"></div>
+      </div>
+
+      {/* The Logo "car" (top layer) */}
+      <img
+        src="/supplylink-logo.png"
+        alt="SupplyLink Logo"
+        className="h-24 relative z-20 animate-logo-bob" 
+      />
+      
+      {/* The scrolling road (middle layer, positioned below the main container) */}
+      <div className="road-container absolute bottom-0 z-10">
+        <div className="road-track">
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+          <div className="road-dash"></div>
+        </div>
+      </div>
+    </div>
+
+    {/* The rest of the loader content */}
+    <div className="text-white text-3xl font-bold mt-2 mb-4 relative z-10">
+      SupplyLink
+    </div>
+    <div className="w-64 h-1 bg-gray-700 rounded-full overflow-hidden relative z-10">
       <div className="h-1 bg-blue-500 rounded-full animate-loader-progress"></div>
     </div>
+
+    {/* All the animation styles are defined here */}
     <style>{`
+      /* Logo "bob" animation */
+      @keyframes logoBob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+      }
+      .animate-logo-bob {
+        animation: logoBob 1.2s ease-in-out infinite;
+      }
+
+      /* Animation for the wind streaks */
+      @keyframes windStream {
+        0% { transform: translate(0, 0) scaleX(0.5); opacity: 1; }
+        100% { transform: translate(-250px, var(--translate-y)) scaleX(1); opacity: 0; }
+      }
+      
+      /* Style for a single streak of wind */
+      .streak {
+        position: absolute; width: 50px; height: 2px;
+        background: linear-gradient(to left, transparent, rgba(139, 195, 255, 0.6));
+        border-radius: 2px;
+        opacity: 0;
+        animation: windStream 1.2s ease-in infinite;
+        transform-origin: left;
+      }
+      
+      /* ✨ MODIFIED: Streaks now start from different points ON the car body */
+      .streak:nth-child(1) { top: 30%; left: 70%; --translate-y: -8px; animation-delay: 0.1s; }
+      .streak:nth-child(2) { top: 45%; left: 80%; --translate-y: 5px; animation-delay: 0.25s; height: 1px; }
+      .streak:nth-child(3) { top: 60%; left: 75%; --translate-y: -5px; animation-delay: 0.4s; }
+      .streak:nth-child(4) { top: 75%; left: 80%; --translate-y: 8px; animation-delay: 0.65s; height: 1px; }
+      .streak:nth-child(5) { top: 55%; left: 70%; --translate-y: 0px; animation-delay: 0.8s; }
+      .streak:nth-child(6) { top: 40%; left: 75%; --translate-y: -5px; animation-delay: 1s; }
+
+      /* Animation and styles for the scrolling road */
+      @keyframes moveRoad {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+      }
+      .road-container {
+        width: 200px; height: 10px; overflow: hidden;
+      }
+      .road-track {
+        width: 200%; height: 100%; display: flex; align-items: center;
+        justify-content: space-around; animation: moveRoad 1s linear infinite;
+      }
+      .road-dash {
+        height: 4px; background-color: rgba(255, 255, 255, 0.4); border-radius: 2px;
+      }
+      .road-dash:nth-child(odd) { width: 40px; }
+      .road-dash:nth-child(even) { width: 20px; }
+
+      /* Original progress bar animation */
       @keyframes loader-progress {
         0% { transform: translateX(-100%); }
         100% { transform: translateX(100%); }

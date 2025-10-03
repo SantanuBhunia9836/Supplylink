@@ -142,7 +142,7 @@ const CartPage = () => {
                     <span>₹{totalPrice.toFixed(2)}</span>
                   </div>
                 </div>
-                <button className="mt-6 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
+                <button onClick={() => navigate('/checkout')}  className="mt-6 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105">
                   Proceed to Checkout
                 </button>
               </div>
